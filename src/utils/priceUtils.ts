@@ -30,3 +30,60 @@ export const isDifferenceSignificant = (dataA: PriceData, dataB: PriceData): boo
 export const formatDate = (date: Date): string => {
   return date.toLocaleString();
 };
+
+/**
+ * Format price with currency symbol
+ */
+export const formatPrice = (price: number): string => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(price);
+};
+
+/**
+ * Format timestamp
+ */
+export const formatTimestamp = (date: Date): string => {
+  return new Intl.DateTimeFormat('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  }).format(date);
+};
+
+/**
+ * Format full date and time
+ */
+export const formatDateTime = (date: Date): string => {
+  return new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  }).format(date);
+};
+
+/**
+ * Calculate duration between two timestamps
+ */
+export const calculateDuration = (start: Date, end: Date): string => {
+  const durationMs = end.getTime() - start.getTime();
+  const seconds = Math.floor(durationMs / 1000) % 60;
+  const minutes = Math.floor(durationMs / (1000 * 60)) % 60;
+  const hours = Math.floor(durationMs / (1000 * 60 * 60));
+  
+  if (hours > 0) {
+    return `${hours}h ${minutes}m ${seconds}s`;
+  } else if (minutes > 0) {
+    return `${minutes}m ${seconds}s`;
+  } else {
+    return `${seconds}s`;
+  }
+};
