@@ -1,73 +1,32 @@
 
-import { PriceData, PriceEvent } from '@/types';
+import { PriceData } from '@/types';
 
-// Calculate price difference between two exchanges
-export const calculatePriceDifference = (
-  price1: PriceData, 
-  price2: PriceData
-): number => {
-  return Math.abs(price1.price - price2.price);
-};
-
-// Check if price difference exceeds threshold
-export const isDifferenceSignificant = (
-  price1: PriceData, 
-  price2: PriceData, 
-  threshold: number = 2
-): boolean => {
-  return calculatePriceDifference(price1, price2) >= threshold;
-};
-
-// Format price with currency symbol
-export const formatPrice = (price: number): string => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(price);
-};
-
-// Format timestamp
-export const formatTimestamp = (date: Date): string => {
-  return new Intl.DateTimeFormat('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false
-  }).format(date);
-};
-
-// Format full date and time
-export const formatDateTime = (date: Date): string => {
-  return new Intl.DateTimeFormat('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false
-  }).format(date);
-};
-
-// Generate a unique ID for events
+/**
+ * Generates a unique identifier
+ */
 export const generateId = (): string => {
-  return Date.now().toString(36) + Math.random().toString(36).substring(2);
+  return Math.random().toString(36).substring(2, 9);
 };
 
-// Calculate duration between two timestamps
-export const calculateDuration = (start: Date, end: Date): string => {
-  const durationMs = end.getTime() - start.getTime();
-  const seconds = Math.floor(durationMs / 1000) % 60;
-  const minutes = Math.floor(durationMs / (1000 * 60)) % 60;
-  const hours = Math.floor(durationMs / (1000 * 60 * 60));
-  
-  if (hours > 0) {
-    return `${hours}h ${minutes}m ${seconds}s`;
-  } else if (minutes > 0) {
-    return `${minutes}m ${seconds}s`;
-  } else {
-    return `${seconds}s`;
-  }
+/**
+ * Calculates the absolute price difference between two exchanges
+ */
+export const calculatePriceDifference = (dataA: PriceData, dataB: PriceData): number => {
+  return Math.abs(dataA.price - dataB.price);
+};
+
+/**
+ * Determines if the price difference is significant enough to track
+ * Now using a 6 dollar threshold instead of the previous 2 dollar threshold
+ */
+export const isDifferenceSignificant = (dataA: PriceData, dataB: PriceData): boolean => {
+  const difference = calculatePriceDifference(dataA, dataB);
+  return difference >= 6; // Changed from 2 to 6 dollars
+};
+
+/**
+ * Formats a date for display
+ */
+export const formatDate = (date: Date): string => {
+  return date.toLocaleString();
 };
