@@ -17,11 +17,11 @@ export const calculatePriceDifference = (dataA: PriceData, dataB: PriceData): nu
 
 /**
  * Determines if the price difference is significant enough to track
- * Now using a 10 dollar threshold instead of the previous 9 dollar threshold
+ * Now using a 12 dollar threshold instead of the previous 10 dollar threshold
  */
 export const isDifferenceSignificant = (dataA: PriceData, dataB: PriceData): boolean => {
   const difference = calculatePriceDifference(dataA, dataB);
-  return difference >= 10; // Changed from 9 to 10 dollars
+  return difference >= 12; // Changed from 10 to 12 dollars
 };
 
 /**
