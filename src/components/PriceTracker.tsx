@@ -127,7 +127,7 @@ const PriceTracker = () => {
       toast({
         title: "Price convergence detected",
         description: "Prices have converged to within the threshold",
-        variant: "success",
+        variant: "default", // Changed from "success" to "default"
       });
     }
   }, [currentEvent, toast]);
@@ -168,7 +168,7 @@ const PriceTracker = () => {
               Error
             </Badge>
           ) : currentEvent ? (
-            <Badge variant="warning" className="animate-pulse flex items-center gap-2">
+            <Badge variant="secondary" className="animate-pulse flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-warning-foreground"></span>
               Active Event
             </Badge>
