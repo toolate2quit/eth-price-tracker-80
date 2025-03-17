@@ -155,8 +155,8 @@ const PriceTracker = () => {
     : 0;
   
   // Determine if current difference meets either of our tracking conditions
-  const isBinanceHigher = binancePrice && coinbasePrice && isBinanceHigherThanCoinbase(binancePrice, coinbaseData);
-  const isCoinbaseHigher = binancePrice && coinbasePrice && isCoinbaseHigherThanBinance(binancePrice, coinbaseData);
+  const isBinanceHigher = binancePrice && coinbasePrice && isBinanceHigherThanCoinbase(binancePrice, coinbasePrice);
+  const isCoinbaseHigher = binancePrice && coinbasePrice && isCoinbaseHigherThanBinance(binancePrice, coinbasePrice);
 
   return (
     <div className="space-y-8">
