@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { PriceData, PriceEvent } from '@/types';
 import { fetchPrice } from '@/services/priceService';
@@ -156,8 +155,8 @@ const PriceTracker = () => {
     : 0;
   
   // Determine if current difference meets either of our tracking conditions
-  const isBinanceHigher = binancePrice && coinbasePrice && isBinanceHigherThanCoinbase(binancePrice, coinbasePrice);
-  const isCoinbaseHigher = binancePrice && coinbasePrice && isCoinbaseHigherThanBinance(binancePrice, coinbasePrice);
+  const isBinanceHigher = binancePrice && coinbasePrice && isBinanceHigherThanCoinbase(binancePrice, coinbaseData);
+  const isCoinbaseHigher = binancePrice && coinbasePrice && isCoinbaseHigherThanBinance(binancePrice, coinbaseData);
 
   return (
     <div className="space-y-8">

@@ -1,4 +1,3 @@
-
 import { PriceData } from '@/types';
 
 /**
@@ -24,20 +23,20 @@ export const calculateDirectionalDifference = (dataA: PriceData, dataB: PriceDat
 
 /**
  * Determines if the price difference is significant enough to track
- * Specifically checks if Binance price is $12 higher than Coinbase
+ * Specifically checks if Binance price is $14 higher than Coinbase
  */
 export const isBinanceHigherThanCoinbase = (binanceData: PriceData, coinbaseData: PriceData): boolean => {
   const difference = calculateDirectionalDifference(binanceData, coinbaseData);
-  return difference >= 12; // Binance is $12 or more higher than Coinbase
+  return difference >= 14; // Binance is $14 or more higher than Coinbase
 };
 
 /**
  * Determines if the price difference is significant enough to end tracking
- * Specifically checks if Coinbase price is $12 higher than Binance
+ * Specifically checks if Coinbase price is $14 higher than Binance
  */
 export const isCoinbaseHigherThanBinance = (binanceData: PriceData, coinbaseData: PriceData): boolean => {
   const difference = calculateDirectionalDifference(coinbaseData, binanceData);
-  return difference >= 12; // Coinbase is $12 or more higher than Binance
+  return difference >= 14; // Coinbase is $14 or more higher than Binance
 };
 
 /**
