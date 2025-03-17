@@ -3,8 +3,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { PriceData, PriceEvent } from '@/types';
 import { fetchPrice } from '@/services/priceService';
 import { 
-  isDifferenceSignificant, 
+  isBinanceHigherThanCoinbase, 
+  isCoinbaseHigherThanBinance,
   calculatePriceDifference, 
+  calculateDirectionalDifference,
   generateId 
 } from '@/utils/priceUtils';
 import PriceDisplay from './PriceDisplay';
@@ -68,10 +70,12 @@ const PriceTracker = () => {
   // Process price data to detect and track events
   const processPriceData = useCallback((binanceData: PriceData, coinbaseData: PriceData) => {
     const difference = calculatePriceDifference(binanceData, coinbaseData);
-    const isSignificant = isDifferenceSignificant(binanceData, coinbaseData);
+    const directionalDifference = calculateDirectionalDifference(binanceData, coinbaseData);
+    const binanceHigherThanCoinbase = isBinanceHigherThanCoinbase(binanceData, coinbaseData);
+    const coinbaseHigherThanBinance = isCoinbaseHigherThanBinance(binanceData, coinbaseData);
     
-    // Case 1: No current event but difference is significant - start new event
-    if (!currentEvent && isSignificant) {
+    // Case 1: No current event but Binance is significantly higher than Coinbase - start new event
+    if (!currentEvent && binanceHigherThanCoinbase) {
       const newEvent: PriceEvent = {
         id: generateId(),
         startTime: new Date(),
@@ -87,14 +91,14 @@ const PriceTracker = () => {
       setEvents(prev => [newEvent, ...prev]);
       
       toast({
-        title: "Price difference detected",
-        description: `Price difference of $${difference.toFixed(2)} detected between Binance and Coinbase`,
+        title: "Price event detected",
+        description: `Binance price is $${directionalDifference.toFixed(2)} higher than Coinbase`,
         variant: "default",
       });
     }
     
-    // Case 2: Current event exists and difference is still significant - update max difference if needed
-    else if (currentEvent && isSignificant) {
+    // Case 2: Current event exists and Binance is still higher than Coinbase - update max difference if needed
+    else if (currentEvent && !coinbaseHigherThanBinance) {
       if (difference > currentEvent.maxDifference) {
         const updatedEvent: PriceEvent = {
           ...currentEvent,
@@ -113,8 +117,8 @@ const PriceTracker = () => {
       }
     }
     
-    // Case 3: Current event exists but difference is no longer significant - close event
-    else if (currentEvent && !isSignificant) {
+    // Case 3: Current event exists and Coinbase is now significantly higher than Binance - close event
+    else if (currentEvent && coinbaseHigherThanBinance) {
       const completedEvent: PriceEvent = {
         ...currentEvent,
         endTime: new Date(),
@@ -125,9 +129,9 @@ const PriceTracker = () => {
       setEvents(prev => prev.map(e => e.id === currentEvent.id ? completedEvent : e));
       
       toast({
-        title: "Price convergence detected",
-        description: "Prices have converged to within the threshold",
-        variant: "default", // Changed from "success" to "default"
+        title: "Price event completed",
+        description: `Coinbase price is now $${(-directionalDifference).toFixed(2)} higher than Binance`,
+        variant: "default",
       });
     }
   }, [currentEvent, toast]);
@@ -146,10 +150,14 @@ const PriceTracker = () => {
     ? calculatePriceDifference(binancePrice, coinbasePrice)
     : 0;
   
-  // Determine if current difference is significant
-  const isCurrentDifferenceSignificant = binancePrice && coinbasePrice
-    ? isDifferenceSignificant(binancePrice, coinbasePrice)
-    : false;
+  // Determine directional difference (positive means Binance higher, negative means Coinbase higher)
+  const directionalDifference = binancePrice && coinbasePrice
+    ? calculateDirectionalDifference(binancePrice, coinbasePrice)
+    : 0;
+  
+  // Determine if current difference meets either of our tracking conditions
+  const isBinanceHigher = binancePrice && coinbasePrice && isBinanceHigherThanCoinbase(binancePrice, coinbasePrice);
+  const isCoinbaseHigher = binancePrice && coinbasePrice && isCoinbaseHigherThanBinance(binancePrice, coinbasePrice);
 
   return (
     <div className="space-y-8">
@@ -209,26 +217,28 @@ const PriceTracker = () => {
       
       {/* Price difference indicator */}
       <Card className={`p-6 glassmorphism transition-all duration-500 ${
-        isCurrentDifferenceSignificant ? 'border-warning' : ''
+        isBinanceHigher ? 'border-warning' : isCoinbaseHigher ? 'border-success' : ''
       }`}>
         <div className="flex flex-col items-center justify-center space-y-2">
           <div className="flex items-center gap-2">
             <ArrowUpDown className={`h-5 w-5 ${
-              isCurrentDifferenceSignificant ? 'text-warning' : 'text-muted-foreground'
+              isBinanceHigher || isCoinbaseHigher ? (isBinanceHigher ? 'text-warning' : 'text-success') : 'text-muted-foreground'
             }`} />
             <h3 className="text-lg font-medium">Current Price Difference</h3>
           </div>
           
           <span className={`text-3xl font-light ${
-            isCurrentDifferenceSignificant ? 'text-warning animate-pulse-once' : ''
+            isBinanceHigher ? 'text-warning animate-pulse-once' : isCoinbaseHigher ? 'text-success animate-pulse-once' : ''
           }`}>
-            ${currentDifference.toFixed(2)}
+            {directionalDifference >= 0 ? '+' : '-'}${Math.abs(directionalDifference).toFixed(2)}
           </span>
           
           <span className="text-sm text-muted-foreground">
-            {isCurrentDifferenceSignificant 
-              ? 'Significant difference detected' 
-              : 'Prices are within normal range'}
+            {isBinanceHigher 
+              ? 'Binance price is significantly higher than Coinbase' 
+              : isCoinbaseHigher 
+                ? 'Coinbase price is significantly higher than Binance' 
+                : 'Prices are within normal range'}
           </span>
         </div>
       </Card>

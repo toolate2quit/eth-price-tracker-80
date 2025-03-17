@@ -16,12 +16,28 @@ export const calculatePriceDifference = (dataA: PriceData, dataB: PriceData): nu
 };
 
 /**
- * Determines if the price difference is significant enough to track
- * Now using a 12 dollar threshold instead of the previous 10 dollar threshold
+ * Calculates the directional price difference (A - B)
  */
-export const isDifferenceSignificant = (dataA: PriceData, dataB: PriceData): boolean => {
-  const difference = calculatePriceDifference(dataA, dataB);
-  return difference >= 12; // Changed from 10 to 12 dollars
+export const calculateDirectionalDifference = (dataA: PriceData, dataB: PriceData): number => {
+  return dataA.price - dataB.price;
+};
+
+/**
+ * Determines if the price difference is significant enough to track
+ * Specifically checks if Binance price is $12 higher than Coinbase
+ */
+export const isBinanceHigherThanCoinbase = (binanceData: PriceData, coinbaseData: PriceData): boolean => {
+  const difference = calculateDirectionalDifference(binanceData, coinbaseData);
+  return difference >= 12; // Binance is $12 or more higher than Coinbase
+};
+
+/**
+ * Determines if the price difference is significant enough to end tracking
+ * Specifically checks if Coinbase price is $12 higher than Binance
+ */
+export const isCoinbaseHigherThanBinance = (binanceData: PriceData, coinbaseData: PriceData): boolean => {
+  const difference = calculateDirectionalDifference(coinbaseData, binanceData);
+  return difference >= 12; // Coinbase is $12 or more higher than Binance
 };
 
 /**
