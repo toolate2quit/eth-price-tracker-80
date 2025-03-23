@@ -145,7 +145,7 @@ const PriceTracker = () => {
       
       toast({
         title: "Price event completed",
-        description: `Price difference inverted: now ${currentEvent.exchangeB.charAt(0).toUpperCase() + currentEvent.exchangeB.slice(1)} is higher than ${currentEvent.exchangeA}. Next event detection in 5 seconds.`,
+        description: `Price difference inverted: now ${currentEvent.exchangeB.charAt(0).toUpperCase() + currentEvent.exchangeB.slice(1)} is higher than ${currentEvent.exchangeA}. Next event detection in 15 seconds.`,
         variant: "default",
       });
     }
@@ -260,7 +260,7 @@ const PriceTracker = () => {
           ) : isInCooldown ? (
             <Badge variant="outline" className="flex items-center gap-2">
               <Clock className="h-3 w-3" />
-              Cooldown (5s)
+              Cooldown (15s)
             </Badge>
           ) : currentEvent ? (
             <Badge variant="secondary" className="animate-pulse flex items-center gap-2">
@@ -322,7 +322,7 @@ const PriceTracker = () => {
           
           <span className="text-sm text-muted-foreground">
             {isInCooldown 
-              ? "Cooldown period: Waiting 5 seconds before the next event"
+              ? "Cooldown period: Waiting 15 seconds before the next event"
               : isPriceSignificant 
                 ? `${directionalDifference > 0 ? 'Binance' : 'Coinbase'} price is significantly higher than ${directionalDifference > 0 ? 'Coinbase' : 'Binance'}`
                 : 'Prices are within normal range'}

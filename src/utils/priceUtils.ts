@@ -1,3 +1,4 @@
+
 import { PriceData } from '@/types';
 
 /**
@@ -55,13 +56,13 @@ export const hasPriceDifferenceInverted = (
 };
 
 /**
- * Check if enough time has passed since the last event (5 second cooldown)
+ * Check if enough time has passed since the last event (15 second cooldown)
  */
 export const hasCooldownPassed = (lastEventEndTime: Date | null): boolean => {
   if (!lastEventEndTime) return true;
   
   const currentTime = new Date();
-  const cooldownTimeMs = 5000; // 5 seconds in milliseconds
+  const cooldownTimeMs = 15000; // 15 seconds in milliseconds
   const timeDifference = currentTime.getTime() - lastEventEndTime.getTime();
   
   return timeDifference >= cooldownTimeMs;
