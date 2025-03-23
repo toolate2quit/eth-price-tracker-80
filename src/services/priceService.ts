@@ -1,3 +1,4 @@
+
 import { PriceData } from '@/types';
 
 // Simulate API calls to exchanges with more realistic price movements
@@ -5,8 +6,8 @@ export const fetchPrice = async (exchange: string): Promise<PriceData> => {
   // In a real implementation, this would use the actual exchange APIs
   
   try {
-    // Static base price to reduce volatility (more realistic for short timeframes)
-    const basePrice = 3500;
+    // Updated base price to reflect current ETH market price (around $2000)
+    const basePrice = 2000;
     
     // Global variables to remember the last price for each exchange
     if (!(window as any).lastPrices) {
