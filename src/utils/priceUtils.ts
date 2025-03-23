@@ -57,6 +57,19 @@ export const hasPriceDifferenceInverted = (
 };
 
 /**
+ * Check if enough time has passed since the last event (5 second cooldown)
+ */
+export const hasCooldownPassed = (lastEventEndTime: Date | null): boolean => {
+  if (!lastEventEndTime) return true;
+  
+  const currentTime = new Date();
+  const cooldownTimeMs = 5000; // 5 seconds in milliseconds
+  const timeDifference = currentTime.getTime() - lastEventEndTime.getTime();
+  
+  return timeDifference >= cooldownTimeMs;
+};
+
+/**
  * Formats a date for display
  */
 export const formatDate = (date: Date): string => {

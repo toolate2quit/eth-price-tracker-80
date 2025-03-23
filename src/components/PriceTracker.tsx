@@ -7,7 +7,8 @@ import {
   hasPriceDifferenceInverted,
   calculatePriceDifference, 
   calculateDirectionalDifference,
-  generateId 
+  generateId,
+  hasCooldownPassed
 } from '@/utils/priceUtils';
 import PriceDisplay from './PriceDisplay';
 import EventList from './EventList';
@@ -34,6 +35,8 @@ const PriceTracker = () => {
   // Event tracking
   const [events, setEvents] = useState<PriceEvent[]>([]);
   const [currentEvent, setCurrentEvent] = useState<PriceEvent | null>(null);
+  const [lastEventEndTime, setLastEventEndTime] = useState<Date | null>(null);
+  const [isInCooldown, setIsInCooldown] = useState(false);
 
   // Fetch prices from exchanges
   const fetchPrices = useCallback(async () => {
@@ -73,8 +76,16 @@ const PriceTracker = () => {
     const directionalDifference = calculateDirectionalDifference(binanceData, coinbaseData);
     const priceDifferenceSignificant = isPriceDifferenceSignificant(binanceData, coinbaseData);
     
-    // Case 1: No current event but price difference is significant - start new event
-    if (!currentEvent && priceDifferenceSignificant) {
+    // Check if cooldown period has passed
+    const cooldownPassed = hasCooldownPassed(lastEventEndTime);
+    
+    // Update cooldown state for UI
+    if (isInCooldown && cooldownPassed) {
+      setIsInCooldown(false);
+    }
+    
+    // Case 1: No current event, cooldown has passed, and price difference is significant - start new event
+    if (!currentEvent && cooldownPassed && priceDifferenceSignificant) {
       const higherExchange = directionalDifference > 0 ? 'binance' : 'coinbase';
       const lowerExchange = directionalDifference > 0 ? 'coinbase' : 'binance';
       
@@ -119,24 +130,27 @@ const PriceTracker = () => {
       }
     }
     
-    // Case 3: Current event exists and price difference has inverted - close event
+    // Case 3: Current event exists and price difference has inverted - close event and start cooldown
     else if (currentEvent && hasPriceDifferenceInverted(currentEvent.exchangeA, binanceData, coinbaseData)) {
+      const now = new Date();
       const completedEvent: PriceEvent = {
         ...currentEvent,
-        endTime: new Date(),
+        endTime: now,
         status: 'completed'
       };
       
       setCurrentEvent(null);
+      setLastEventEndTime(now);
+      setIsInCooldown(true);
       setEvents(prev => prev.map(e => e.id === currentEvent.id ? completedEvent : e));
       
       toast({
         title: "Price event completed",
-        description: `Price difference inverted: now ${currentEvent.exchangeB.charAt(0).toUpperCase() + currentEvent.exchangeB.slice(1)} is significantly higher than ${currentEvent.exchangeA}`,
+        description: `Price difference inverted: now ${currentEvent.exchangeB.charAt(0).toUpperCase() + currentEvent.exchangeB.slice(1)} is significantly higher than ${currentEvent.exchangeA}. Next event detection in 5 seconds.`,
         variant: "default",
       });
     }
-  }, [currentEvent, toast]);
+  }, [currentEvent, toast, lastEventEndTime, isInCooldown]);
 
   // Initial fetch and setup interval
   useEffect(() => {
@@ -176,6 +190,11 @@ const PriceTracker = () => {
           ) : error ? (
             <Badge variant="destructive" className="flex items-center gap-2">
               Error
+            </Badge>
+          ) : isInCooldown ? (
+            <Badge variant="outline" className="flex items-center gap-2">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Cooldown (5s)
             </Badge>
           ) : currentEvent ? (
             <Badge variant="secondary" className="animate-pulse flex items-center gap-2">
@@ -236,9 +255,11 @@ const PriceTracker = () => {
           </span>
           
           <span className="text-sm text-muted-foreground">
-            {isPriceSignificant 
-              ? `${directionalDifference > 0 ? 'Binance' : 'Coinbase'} price is significantly higher than ${directionalDifference > 0 ? 'Coinbase' : 'Binance'}`
-              : 'Prices are within normal range'}
+            {isInCooldown 
+              ? "Cooldown period: Waiting 5 seconds before the next event"
+              : isPriceSignificant 
+                ? `${directionalDifference > 0 ? 'Binance' : 'Coinbase'} price is significantly higher than ${directionalDifference > 0 ? 'Coinbase' : 'Binance'}`
+                : 'Prices are within normal range'}
           </span>
         </div>
       </Card>
