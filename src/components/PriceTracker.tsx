@@ -1,9 +1,10 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { PriceData, PriceEvent } from '@/types';
 import { fetchPrice } from '@/services/priceService';
 import { 
-  isBinanceHigherThanCoinbase, 
-  isCoinbaseHigherThanBinance,
+  isPriceDifferenceSignificant, 
+  hasPriceDifferenceInverted,
   calculatePriceDifference, 
   calculateDirectionalDifference,
   generateId 
@@ -70,16 +71,18 @@ const PriceTracker = () => {
   const processPriceData = useCallback((binanceData: PriceData, coinbaseData: PriceData) => {
     const difference = calculatePriceDifference(binanceData, coinbaseData);
     const directionalDifference = calculateDirectionalDifference(binanceData, coinbaseData);
-    const binanceHigherThanCoinbase = isBinanceHigherThanCoinbase(binanceData, coinbaseData);
-    const coinbaseHigherThanBinance = isCoinbaseHigherThanBinance(binanceData, coinbaseData);
+    const priceDifferenceSignificant = isPriceDifferenceSignificant(binanceData, coinbaseData);
     
-    // Case 1: No current event but Binance is significantly higher than Coinbase - start new event
-    if (!currentEvent && binanceHigherThanCoinbase) {
+    // Case 1: No current event but price difference is significant - start new event
+    if (!currentEvent && priceDifferenceSignificant) {
+      const higherExchange = directionalDifference > 0 ? 'binance' : 'coinbase';
+      const lowerExchange = directionalDifference > 0 ? 'coinbase' : 'binance';
+      
       const newEvent: PriceEvent = {
         id: generateId(),
         startTime: new Date(),
-        exchangeA: 'binance',
-        exchangeB: 'coinbase',
+        exchangeA: higherExchange,
+        exchangeB: lowerExchange,
         initialDifference: difference,
         maxDifference: difference,
         maxDifferenceTime: new Date(),
@@ -91,13 +94,13 @@ const PriceTracker = () => {
       
       toast({
         title: "Price event detected",
-        description: `Binance price is $${directionalDifference.toFixed(2)} higher than Coinbase`,
+        description: `${higherExchange.charAt(0).toUpperCase() + higherExchange.slice(1)} price is $${Math.abs(directionalDifference).toFixed(2)} higher than ${lowerExchange}`,
         variant: "default",
       });
     }
     
-    // Case 2: Current event exists and Binance is still higher than Coinbase - update max difference if needed
-    else if (currentEvent && !coinbaseHigherThanBinance) {
+    // Case 2: Current event exists and price difference is still significant but not inverted - update max difference if needed
+    else if (currentEvent && !hasPriceDifferenceInverted(currentEvent.exchangeA, binanceData, coinbaseData)) {
       if (difference > currentEvent.maxDifference) {
         const updatedEvent: PriceEvent = {
           ...currentEvent,
@@ -116,8 +119,8 @@ const PriceTracker = () => {
       }
     }
     
-    // Case 3: Current event exists and Coinbase is now significantly higher than Binance - close event
-    else if (currentEvent && coinbaseHigherThanBinance) {
+    // Case 3: Current event exists and price difference has inverted - close event
+    else if (currentEvent && hasPriceDifferenceInverted(currentEvent.exchangeA, binanceData, coinbaseData)) {
       const completedEvent: PriceEvent = {
         ...currentEvent,
         endTime: new Date(),
@@ -129,7 +132,7 @@ const PriceTracker = () => {
       
       toast({
         title: "Price event completed",
-        description: `Coinbase price is now $${(-directionalDifference).toFixed(2)} higher than Binance`,
+        description: `Price difference inverted: now ${currentEvent.exchangeB.charAt(0).toUpperCase() + currentEvent.exchangeB.slice(1)} is significantly higher than ${currentEvent.exchangeA}`,
         variant: "default",
       });
     }
@@ -154,9 +157,9 @@ const PriceTracker = () => {
     ? calculateDirectionalDifference(binancePrice, coinbasePrice)
     : 0;
   
-  // Determine if current difference meets either of our tracking conditions
-  const isBinanceHigher = binancePrice && coinbasePrice && isBinanceHigherThanCoinbase(binancePrice, coinbasePrice);
-  const isCoinbaseHigher = binancePrice && coinbasePrice && isCoinbaseHigherThanBinance(binancePrice, coinbasePrice);
+  // Determine if current difference meets our tracking condition
+  const isPriceSignificant = binancePrice && coinbasePrice && 
+    isPriceDifferenceSignificant(binancePrice, coinbasePrice);
 
   return (
     <div className="space-y-8">
@@ -216,28 +219,26 @@ const PriceTracker = () => {
       
       {/* Price difference indicator */}
       <Card className={`p-6 glassmorphism transition-all duration-500 ${
-        isBinanceHigher ? 'border-warning' : isCoinbaseHigher ? 'border-success' : ''
+        isPriceSignificant ? 'border-warning' : ''
       }`}>
         <div className="flex flex-col items-center justify-center space-y-2">
           <div className="flex items-center gap-2">
             <ArrowUpDown className={`h-5 w-5 ${
-              isBinanceHigher || isCoinbaseHigher ? (isBinanceHigher ? 'text-warning' : 'text-success') : 'text-muted-foreground'
+              isPriceSignificant ? 'text-warning' : 'text-muted-foreground'
             }`} />
             <h3 className="text-lg font-medium">Current Price Difference</h3>
           </div>
           
           <span className={`text-3xl font-light ${
-            isBinanceHigher ? 'text-warning animate-pulse-once' : isCoinbaseHigher ? 'text-success animate-pulse-once' : ''
+            isPriceSignificant ? 'text-warning animate-pulse-once' : ''
           }`}>
             {directionalDifference >= 0 ? '+' : '-'}${Math.abs(directionalDifference).toFixed(2)}
           </span>
           
           <span className="text-sm text-muted-foreground">
-            {isBinanceHigher 
-              ? 'Binance price is significantly higher than Coinbase' 
-              : isCoinbaseHigher 
-                ? 'Coinbase price is significantly higher than Binance' 
-                : 'Prices are within normal range'}
+            {isPriceSignificant 
+              ? `${directionalDifference > 0 ? 'Binance' : 'Coinbase'} price is significantly higher than ${directionalDifference > 0 ? 'Coinbase' : 'Binance'}`
+              : 'Prices are within normal range'}
           </span>
         </div>
       </Card>

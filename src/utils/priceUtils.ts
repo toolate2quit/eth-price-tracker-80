@@ -1,3 +1,4 @@
+
 import { PriceData } from '@/types';
 
 /**
@@ -23,20 +24,36 @@ export const calculateDirectionalDifference = (dataA: PriceData, dataB: PriceDat
 
 /**
  * Determines if the price difference is significant enough to track
- * Specifically checks if Binance price is $14 higher than Coinbase
+ * Specifically checks if there's an $18 difference between exchanges
  */
-export const isBinanceHigherThanCoinbase = (binanceData: PriceData, coinbaseData: PriceData): boolean => {
-  const difference = calculateDirectionalDifference(binanceData, coinbaseData);
-  return difference >= 14; // Binance is $14 or more higher than Coinbase
+export const isPriceDifferenceSignificant = (dataA: PriceData, dataB: PriceData): boolean => {
+  const difference = calculatePriceDifference(dataA, dataB);
+  return difference >= 18;
 };
 
 /**
- * Determines if the price difference is significant enough to end tracking
- * Specifically checks if Coinbase price is $14 higher than Binance
+ * Determines if the price difference has inverted to the opposite direction
+ * Checks if price difference inverted and is at least $18 in the opposite direction
  */
-export const isCoinbaseHigherThanBinance = (binanceData: PriceData, coinbaseData: PriceData): boolean => {
-  const difference = calculateDirectionalDifference(coinbaseData, binanceData);
-  return difference >= 14; // Coinbase is $14 or more higher than Binance
+export const hasPriceDifferenceInverted = (
+  initialHigherExchange: string, 
+  dataA: PriceData, 
+  dataB: PriceData
+): boolean => {
+  const currentDifference = calculateDirectionalDifference(dataA, dataB);
+  
+  // If Binance was initially higher
+  if (initialHigherExchange === 'binance') {
+    // Check if now Coinbase is higher by at least $18
+    return currentDifference <= -18;
+  } 
+  // If Coinbase was initially higher
+  else if (initialHigherExchange === 'coinbase') {
+    // Check if now Binance is higher by at least $18
+    return currentDifference >= 18;
+  }
+  
+  return false;
 };
 
 /**
