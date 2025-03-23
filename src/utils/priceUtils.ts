@@ -1,4 +1,3 @@
-
 import { PriceData } from '@/types';
 
 /**
@@ -24,11 +23,11 @@ export const calculateDirectionalDifference = (dataA: PriceData, dataB: PriceDat
 
 /**
  * Determines if the price difference is significant enough to track
- * For this example, we'll consider a $25 difference significant
+ * For this example, we'll consider a $40 difference significant
  */
 export const isPriceDifferenceSignificant = (dataA: PriceData, dataB: PriceData): boolean => {
   const difference = calculatePriceDifference(dataA, dataB);
-  return difference >= 25;
+  return difference >= 40;
 };
 
 /**
