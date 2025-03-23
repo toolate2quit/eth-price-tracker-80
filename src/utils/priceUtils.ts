@@ -1,4 +1,3 @@
-
 import { PriceData } from '@/types';
 
 /**
@@ -67,6 +66,58 @@ export const hasCooldownPassed = (lastEventEndTime: Date | null): boolean => {
   const timeDifference = currentTime.getTime() - lastEventEndTime.getTime();
   
   return timeDifference >= cooldownTimeMs;
+};
+
+/**
+ * Calculate potential profitability of an arbitrage opportunity
+ * Accounts for exchange fees, slippage, and execution latency
+ */
+export const calculateArbitrageProfitability = (
+  buyExchange: string,
+  sellExchange: string,
+  buyPrice: number,
+  sellPrice: number,
+  tradingAmount: number = 1000 // Default $1000 trading amount
+): {
+  isProfit: boolean;
+  profitLoss: number;
+  profitLossPercent: number;
+  details: {
+    fees: number;
+    estimatedSlippage: number;
+    netPriceDifference: number;
+  }
+} => {
+  // Typical exchange fees (0.1% for market takers)
+  const feePercent = 0.1;
+  const buyFee = (buyPrice * tradingAmount / buyPrice) * (feePercent / 100);
+  const sellFee = (sellPrice * tradingAmount / sellPrice) * (feePercent / 100);
+  const totalFees = buyFee + sellFee;
+  
+  // Estimated slippage (0.05% to 0.2% for mid-size orders)
+  const averageSlippagePercent = 0.15;
+  const slippageImpact = (buyPrice * averageSlippagePercent / 100) + (sellPrice * averageSlippagePercent / 100);
+  
+  // Calculate net price difference after fees and slippage
+  const priceDifference = sellPrice - buyPrice;
+  const netPriceDifference = priceDifference - slippageImpact;
+  
+  // Calculate profit or loss
+  const tokensBought = tradingAmount / buyPrice;
+  const grossRevenue = tokensBought * sellPrice;
+  const profitLoss = grossRevenue - tradingAmount - totalFees;
+  const profitLossPercent = (profitLoss / tradingAmount) * 100;
+  
+  return {
+    isProfit: profitLoss > 0,
+    profitLoss,
+    profitLossPercent,
+    details: {
+      fees: totalFees,
+      estimatedSlippage: slippageImpact,
+      netPriceDifference
+    }
+  };
 };
 
 /**

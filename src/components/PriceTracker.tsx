@@ -1,14 +1,15 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { PriceData, PriceEvent } from '@/types';
-import { fetchPrice } from '@/services/priceService';
+import { fetchPrice, simulateOrderExecution } from '@/services/priceService';
 import { 
   isPriceDifferenceSignificant, 
   hasPriceDifferenceInverted,
   calculatePriceDifference, 
   calculateDirectionalDifference,
   generateId,
-  hasCooldownPassed
+  hasCooldownPassed,
+  calculateArbitrageProfitability
 } from '@/utils/priceUtils';
 import PriceDisplay from './PriceDisplay';
 import EventList from './EventList';
@@ -16,10 +17,10 @@ import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
-import { Loader2, ArrowUpDown } from 'lucide-react';
+import { Loader2, ArrowUpDown, Clock, AlertTriangle } from 'lucide-react';
 
-// Refresh interval in milliseconds
-const REFRESH_INTERVAL = 5000;
+// Slower refresh interval for more realistic API behavior (10 seconds)
+const REFRESH_INTERVAL = 10000;
 
 const PriceTracker = () => {
   const { toast } = useToast();
@@ -37,10 +38,15 @@ const PriceTracker = () => {
   const [currentEvent, setCurrentEvent] = useState<PriceEvent | null>(null);
   const [lastEventEndTime, setLastEventEndTime] = useState<Date | null>(null);
   const [isInCooldown, setIsInCooldown] = useState(false);
-
-  // Fetch prices from exchanges
+  
+  // Trading simulation
+  const [simulatingTrade, setSimulatingTrade] = useState(false);
+  const [profitEstimate, setProfitEstimate] = useState<number | null>(null);
+  
+  // Fetch prices from exchanges with simulated network delays
   const fetchPrices = useCallback(async () => {
     try {
+      // Each fetch has its own random latency (20-100ms)
       const [binanceData, coinbaseData] = await Promise.all([
         fetchPrice('binance'),
         fetchPrice('coinbase')
@@ -76,6 +82,29 @@ const PriceTracker = () => {
     const directionalDifference = calculateDirectionalDifference(binanceData, coinbaseData);
     const priceDifferenceSignificant = isPriceDifferenceSignificant(binanceData, coinbaseData);
     
+    // Calculate potential profit for UI display
+    if (difference > 0) {
+      const buyExchange = directionalDifference < 0 ? 'binance' : 'coinbase';
+      const sellExchange = directionalDifference < 0 ? 'coinbase' : 'binance';
+      const buyPrice = directionalDifference < 0 ? binanceData.price : coinbaseData.price;
+      const sellPrice = directionalDifference < 0 ? coinbaseData.price : binanceData.price;
+      
+      const { isProfit, profitLoss } = calculateArbitrageProfitability(
+        buyExchange, 
+        sellExchange,
+        buyPrice,
+        sellPrice
+      );
+      
+      if (isProfit) {
+        setProfitEstimate(profitLoss);
+      } else {
+        setProfitEstimate(null);
+      }
+    } else {
+      setProfitEstimate(null);
+    }
+    
     // Check if cooldown period has passed
     const cooldownPassed = hasCooldownPassed(lastEventEndTime);
     
@@ -102,6 +131,9 @@ const PriceTracker = () => {
       
       setCurrentEvent(newEvent);
       setEvents(prev => [newEvent, ...prev]);
+      
+      // Simulate trade execution at the beginning of the event
+      simulateTrade(higherExchange, lowerExchange, binanceData.price, coinbaseData.price);
       
       toast({
         title: "Price event detected",
@@ -152,6 +184,78 @@ const PriceTracker = () => {
     }
   }, [currentEvent, toast, lastEventEndTime, isInCooldown]);
 
+  // Simulate trade execution with latency and slippage
+  const simulateTrade = async (
+    sellExchange: string, 
+    buyExchange: string,
+    binancePrice: number,
+    coinbasePrice: number
+  ) => {
+    setSimulatingTrade(true);
+    
+    try {
+      // Determine prices based on exchanges
+      const sellPrice = sellExchange === 'binance' ? binancePrice : coinbasePrice;
+      const buyPrice = buyExchange === 'binance' ? binancePrice : coinbasePrice;
+      
+      // Simulate order execution (with latency)
+      const [sellResult, buyResult] = await Promise.all([
+        simulateOrderExecution(sellExchange, sellPrice, 'sell'),
+        simulateOrderExecution(buyExchange, buyPrice, 'buy')
+      ]);
+      
+      // Calculate actual profit/loss based on execution results
+      const totalLatency = Math.max(sellResult.latency, buyResult.latency);
+      const tradingAmount = 1000; // $1000
+      const tokensSold = tradingAmount / sellResult.executionPrice;
+      const cost = buyResult.executionPrice * tokensSold;
+      const actualProfit = tradingAmount - cost;
+      
+      // Log the trade simulation results
+      console.log('Trade simulation results:', {
+        sellExchange,
+        buyExchange,
+        sellPrice,
+        buyPrice,
+        sellExecutionPrice: sellResult.executionPrice,
+        buyExecutionPrice: buyResult.executionPrice,
+        totalLatency: `${totalLatency}ms`,
+        actualProfit: actualProfit.toFixed(2),
+        sellSuccess: sellResult.success,
+        buySuccess: buyResult.success
+      });
+      
+      if (!sellResult.success || !buyResult.success) {
+        toast({
+          title: "Trade execution failed",
+          description: `One or more orders failed to execute. This happens in real markets due to liquidity issues.`,
+          variant: "destructive",
+        });
+      } else if (actualProfit > 0) {
+        toast({
+          title: "Arbitrage trade profitable",
+          description: `Profit: $${actualProfit.toFixed(2)} (Execution time: ${totalLatency}ms)`,
+          variant: "default",
+        });
+      } else {
+        toast({
+          title: "Arbitrage trade unprofitable",
+          description: `Loss: $${Math.abs(actualProfit).toFixed(2)} due to slippage and fees`,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error simulating trade:', error);
+      toast({
+        title: "Trade simulation error",
+        description: "Failed to simulate trade execution",
+        variant: "destructive",
+      });
+    } finally {
+      setSimulatingTrade(false);
+    }
+  };
+
   // Initial fetch and setup interval
   useEffect(() => {
     fetchPrices();
@@ -179,7 +283,10 @@ const PriceTracker = () => {
     <div className="space-y-8">
       {/* Header with status indicator */}
       <div className="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0">
-        <h1 className="text-4xl font-light tracking-tight">Ethereum Price Tracker</h1>
+        <div>
+          <h1 className="text-4xl font-light tracking-tight">Ethereum Price Tracker</h1>
+          <p className="text-sm text-muted-foreground">Example B: Enhanced Trading Simulation (refreshes every {REFRESH_INTERVAL/1000}s)</p>
+        </div>
         
         <div className="flex items-center space-x-2">
           {loading ? (
@@ -191,9 +298,14 @@ const PriceTracker = () => {
             <Badge variant="destructive" className="flex items-center gap-2">
               Error
             </Badge>
+          ) : simulatingTrade ? (
+            <Badge variant="secondary" className="flex items-center gap-2">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Simulating Trade
+            </Badge>
           ) : isInCooldown ? (
             <Badge variant="outline" className="flex items-center gap-2">
-              <Loader2 className="h-3 w-3 animate-spin" />
+              <Clock className="h-3 w-3" />
               Cooldown (5s)
             </Badge>
           ) : currentEvent ? (
@@ -261,6 +373,18 @@ const PriceTracker = () => {
                 ? `${directionalDifference > 0 ? 'Binance' : 'Coinbase'} price is significantly higher than ${directionalDifference > 0 ? 'Coinbase' : 'Binance'}`
                 : 'Prices are within normal range'}
           </span>
+          
+          {profitEstimate !== null && (
+            <div className="mt-2 flex items-center gap-2 text-sm bg-muted p-2 rounded">
+              <span className="text-green-500 font-medium">
+                Estimated profit: ${profitEstimate.toFixed(2)}
+              </span>
+              <AlertTriangle className="h-3 w-3 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">
+                Before execution latency
+              </span>
+            </div>
+          )}
         </div>
       </Card>
       
