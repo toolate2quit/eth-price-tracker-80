@@ -1,3 +1,4 @@
+
 import { PriceData } from '@/types';
 
 /**
@@ -11,14 +12,16 @@ export const generateId = (): string => {
  * Calculates the absolute price difference between two exchanges
  */
 export const calculatePriceDifference = (dataA: PriceData, dataB: PriceData): number => {
-  return Math.abs(dataA.price - dataB.price);
+  // Ensure the calculation returns a precise value with 2 decimal places
+  return parseFloat(Math.abs(dataA.price - dataB.price).toFixed(2));
 };
 
 /**
  * Calculates the directional price difference (A - B)
  */
 export const calculateDirectionalDifference = (dataA: PriceData, dataB: PriceData): number => {
-  return dataA.price - dataB.price;
+  // Ensure the calculation returns a precise value with 2 decimal places
+  return parseFloat((dataA.price - dataB.price).toFixed(2));
 };
 
 /**
@@ -27,12 +30,11 @@ export const calculateDirectionalDifference = (dataA: PriceData, dataB: PriceDat
  */
 export const isPriceDifferenceSignificant = (dataA: PriceData, dataB: PriceData): boolean => {
   const difference = calculatePriceDifference(dataA, dataB);
-  return difference >= 18;
+  return difference >= 15; // Reduced threshold to 15 to detect more opportunities
 };
 
 /**
  * Determines if the price difference has inverted to the opposite direction
- * Checks if price difference inverted and is at least $18 in the opposite direction
  */
 export const hasPriceDifferenceInverted = (
   initialHigherExchange: string, 
@@ -43,13 +45,13 @@ export const hasPriceDifferenceInverted = (
   
   // If Binance was initially higher
   if (initialHigherExchange === 'binance') {
-    // Check if now Coinbase is higher by at least $18
-    return currentDifference <= -18;
+    // Check if now Coinbase is higher by at least $15
+    return currentDifference <= -15;
   } 
   // If Coinbase was initially higher
   else if (initialHigherExchange === 'coinbase') {
-    // Check if now Binance is higher by at least $18
-    return currentDifference >= 18;
+    // Check if now Binance is higher by at least $15
+    return currentDifference >= 15;
   }
   
   return false;

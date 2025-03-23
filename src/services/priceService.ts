@@ -8,7 +8,6 @@ export const fetchPrice = async (exchange: string): Promise<PriceData> => {
     // Static base price to reduce volatility (more realistic for short timeframes)
     const basePrice = 3500;
     
-    // Use pseudorandom walk to simulate gradual price changes
     // Global variables to remember the last price for each exchange
     if (!(window as any).lastPrices) {
       (window as any).lastPrices = {
@@ -35,21 +34,20 @@ export const fetchPrice = async (exchange: string): Promise<PriceData> => {
     }
     
     // Occasionally create larger arbitrage opportunities (about 5% of the time)
-    // This simulates sudden liquidity events that create arbitrage opportunities
     if (Math.random() > 0.95) {
       console.log('Creating arbitrage opportunity');
       if (exchange === 'binance') {
-        price += Math.random() * 10 + 10; // $10-20 sudden movement
+        price += Math.random() * 10 + 5; // $5-15 sudden movement
       } else if (exchange === 'coinbase') {
-        price -= Math.random() * 10 + 10; // $10-20 sudden movement
+        price -= Math.random() * 10 + 5; // $5-15 sudden movement
       }
     }
     
     // Save this price for next time
     (window as any).lastPrices[exchange] = price;
     
-    // Format to 2 decimal places
-    price = Math.round(price * 100) / 100;
+    // Format to 2 decimal places for consistency
+    price = parseFloat(price.toFixed(2));
     
     // Add simulated network latency (20-100ms)
     const latency = Math.random() * 80 + 20;
