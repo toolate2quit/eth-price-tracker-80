@@ -12,25 +12,23 @@ export const generateId = (): string => {
  * Calculates the absolute price difference between two exchanges
  */
 export const calculatePriceDifference = (dataA: PriceData, dataB: PriceData): number => {
-  // Ensure the calculation returns a precise value with 2 decimal places
-  return parseFloat(Math.abs(dataA.price - dataB.price).toFixed(2));
+  return Math.abs(dataA.price - dataB.price);
 };
 
 /**
  * Calculates the directional price difference (A - B)
  */
 export const calculateDirectionalDifference = (dataA: PriceData, dataB: PriceData): number => {
-  // Ensure the calculation returns a precise value with 2 decimal places
-  return parseFloat((dataA.price - dataB.price).toFixed(2));
+  return dataA.price - dataB.price;
 };
 
 /**
  * Determines if the price difference is significant enough to track
- * Specifically checks if there's an $18 difference between exchanges
+ * For this example, we'll consider a $25 difference significant
  */
 export const isPriceDifferenceSignificant = (dataA: PriceData, dataB: PriceData): boolean => {
   const difference = calculatePriceDifference(dataA, dataB);
-  return difference >= 15; // Reduced threshold to 15 to detect more opportunities
+  return difference >= 25;
 };
 
 /**
@@ -45,13 +43,13 @@ export const hasPriceDifferenceInverted = (
   
   // If Binance was initially higher
   if (initialHigherExchange === 'binance') {
-    // Check if now Coinbase is higher by at least $15
-    return currentDifference <= -15;
+    // Check if now Coinbase is higher
+    return currentDifference < 0;
   } 
   // If Coinbase was initially higher
   else if (initialHigherExchange === 'coinbase') {
-    // Check if now Binance is higher by at least $15
-    return currentDifference >= 15;
+    // Check if now Binance is higher
+    return currentDifference > 0;
   }
   
   return false;
@@ -68,58 +66,6 @@ export const hasCooldownPassed = (lastEventEndTime: Date | null): boolean => {
   const timeDifference = currentTime.getTime() - lastEventEndTime.getTime();
   
   return timeDifference >= cooldownTimeMs;
-};
-
-/**
- * Calculate potential profitability of an arbitrage opportunity
- * Accounts for exchange fees, slippage, and execution latency
- */
-export const calculateArbitrageProfitability = (
-  buyExchange: string,
-  sellExchange: string,
-  buyPrice: number,
-  sellPrice: number,
-  tradingAmount: number = 1000 // Default $1000 trading amount
-): {
-  isProfit: boolean;
-  profitLoss: number;
-  profitLossPercent: number;
-  details: {
-    fees: number;
-    estimatedSlippage: number;
-    netPriceDifference: number;
-  }
-} => {
-  // Typical exchange fees (0.1% for market takers)
-  const feePercent = 0.1;
-  const buyFee = (buyPrice * tradingAmount / buyPrice) * (feePercent / 100);
-  const sellFee = (sellPrice * tradingAmount / sellPrice) * (feePercent / 100);
-  const totalFees = buyFee + sellFee;
-  
-  // Estimated slippage (0.05% to 0.2% for mid-size orders)
-  const averageSlippagePercent = 0.15;
-  const slippageImpact = (buyPrice * averageSlippagePercent / 100) + (sellPrice * averageSlippagePercent / 100);
-  
-  // Calculate net price difference after fees and slippage
-  const priceDifference = sellPrice - buyPrice;
-  const netPriceDifference = priceDifference - slippageImpact;
-  
-  // Calculate profit or loss
-  const tokensBought = tradingAmount / buyPrice;
-  const grossRevenue = tokensBought * sellPrice;
-  const profitLoss = grossRevenue - tradingAmount - totalFees;
-  const profitLossPercent = (profitLoss / tradingAmount) * 100;
-  
-  return {
-    isProfit: profitLoss > 0,
-    profitLoss,
-    profitLossPercent,
-    details: {
-      fees: totalFees,
-      estimatedSlippage: slippageImpact,
-      netPriceDifference
-    }
-  };
 };
 
 /**
