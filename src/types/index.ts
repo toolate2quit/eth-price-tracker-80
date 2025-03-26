@@ -15,6 +15,7 @@ export interface PriceEvent {
   maxDifference: number;
   maxDifferenceTime?: Date;
   status: 'active' | 'completed';
+  forcedExit?: boolean; // New property to track if the trade was forcibly exited
 }
 
 export interface ExportData {

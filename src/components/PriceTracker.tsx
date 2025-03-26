@@ -15,13 +15,18 @@ import EventList from './EventList';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/components/ui/use-toast';
-import { Loader2, ArrowUpDown, Clock } from 'lucide-react';
+import { Loader2, ArrowUpDown, Clock, Power } from 'lucide-react';
 
 const PriceTracker = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Trading bot state
+  const [isTradingEnabled, setIsTradingEnabled] = useState(false);
+  const [isInitialCooldown, setIsInitialCooldown] = useState(false);
   
   // Price data
   const [binancePrice, setBinancePrice] = useState<PriceData | null>(null);
@@ -34,6 +39,60 @@ const PriceTracker = () => {
   const [currentEvent, setCurrentEvent] = useState<PriceEvent | null>(null);
   const [lastEventEndTime, setLastEventEndTime] = useState<Date | null>(null);
   const [isInCooldown, setIsInCooldown] = useState(false);
+  
+  // Toggle trading bot
+  const handleToggleTrading = () => {
+    const newState = !isTradingEnabled;
+    setIsTradingEnabled(newState);
+    
+    if (newState) {
+      // Bot turned ON
+      setIsInitialCooldown(true);
+      setLastEventEndTime(new Date()); // Start cooldown period
+      
+      toast({
+        title: "Trading Bot Enabled",
+        description: "Bot will start monitoring for trading opportunities after a 15 second initialization period.",
+        variant: "default",
+      });
+    } else {
+      // Bot turned OFF
+      if (currentEvent) {
+        // Exit current trade if one is active
+        exitCurrentTrade();
+      }
+      
+      setIsInitialCooldown(false);
+      
+      toast({
+        title: "Trading Bot Disabled",
+        description: "Bot has been turned off and will not execute any new trades.",
+        variant: "default",
+      });
+    }
+  };
+  
+  // Exit current trade (when bot is turned off)
+  const exitCurrentTrade = () => {
+    if (!currentEvent) return;
+    
+    const now = new Date();
+    const completedEvent: PriceEvent = {
+      ...currentEvent,
+      endTime: now,
+      status: 'completed',
+      forcedExit: true // Mark this event as forcibly exited
+    };
+    
+    setCurrentEvent(null);
+    setEvents(prev => prev.map(e => e.id === currentEvent.id ? completedEvent : e));
+    
+    toast({
+      title: "Trade Exited",
+      description: "Current trade has been forcibly exited due to bot shutdown.",
+      variant: "destructive",
+    });
+  };
   
   // Fetch prices from exchanges
   const fetchPrices = useCallback(async () => {
@@ -57,13 +116,15 @@ const PriceTracker = () => {
       setLoading(false);
       setError(null);
       
-      // Process price data for event tracking
-      processPriceData(binanceData, coinbaseData);
+      // Only process price data if trading is enabled
+      if (isTradingEnabled) {
+        processPriceData(binanceData, coinbaseData);
+      }
     } catch (err) {
       setError("Failed to fetch price data. Retrying...");
       console.error("Error fetching prices:", err);
     }
-  }, [binancePrice, coinbasePrice]);
+  }, [binancePrice, coinbasePrice, isTradingEnabled]);
 
   // Process price data to detect and track events
   const processPriceData = useCallback((binanceData: PriceData, coinbaseData: PriceData) => {
@@ -75,8 +136,9 @@ const PriceTracker = () => {
     const cooldownPassed = hasCooldownPassed(lastEventEndTime);
     
     // Update cooldown state for UI
-    if (isInCooldown && cooldownPassed) {
+    if ((isInCooldown || isInitialCooldown) && cooldownPassed) {
       setIsInCooldown(false);
+      setIsInitialCooldown(false);
     }
     
     // Case 1: No current event, cooldown has passed, and price difference is significant - start new event
@@ -149,7 +211,7 @@ const PriceTracker = () => {
         variant: "default",
       });
     }
-  }, [currentEvent, lastEventEndTime, isInCooldown, toast]);
+  }, [currentEvent, lastEventEndTime, isInCooldown, isInitialCooldown, toast]);
 
   // Simulate trade execution
   const simulateTradeExecution = async (
@@ -240,39 +302,63 @@ const PriceTracker = () => {
 
   return (
     <div className="space-y-8">
-      {/* Header with status indicator */}
+      {/* Header with status indicator and trading switch */}
       <div className="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0">
         <div>
           <h1 className="text-4xl font-light tracking-tight">Ethereum Price Tracker</h1>
           <p className="text-sm text-muted-foreground">Example A: Tracking price differences between exchanges</p>
         </div>
         
-        <div className="flex items-center space-x-2">
-          {loading ? (
-            <Badge variant="outline" className="flex items-center gap-2">
-              <Loader2 className="h-3 w-3 animate-spin" />
-              Initializing
-            </Badge>
-          ) : error ? (
-            <Badge variant="destructive" className="flex items-center gap-2">
-              Error
-            </Badge>
-          ) : isInCooldown ? (
-            <Badge variant="outline" className="flex items-center gap-2">
-              <Clock className="h-3 w-3" />
-              Cooldown (15s)
-            </Badge>
-          ) : currentEvent ? (
-            <Badge variant="secondary" className="animate-pulse flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-warning-foreground"></span>
-              Active Event
-            </Badge>
-          ) : (
-            <Badge variant="outline" className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-green-500"></span>
-              Monitoring
-            </Badge>
-          )}
+        <div className="flex items-center space-x-4">
+          {/* Trading Bot Switch */}
+          <div className="flex items-center space-x-2">
+            <Switch
+              checked={isTradingEnabled}
+              onCheckedChange={handleToggleTrading}
+              id="trading-mode"
+            />
+            <label
+              htmlFor="trading-mode"
+              className="text-sm font-medium cursor-pointer flex items-center gap-1"
+            >
+              <Power className={`h-4 w-4 ${isTradingEnabled ? 'text-green-500' : 'text-muted-foreground'}`} />
+              Trading Bot {isTradingEnabled ? 'Enabled' : 'Disabled'}
+            </label>
+          </div>
+          
+          {/* Status Badge */}
+          <div className="flex items-center space-x-2">
+            {loading ? (
+              <Badge variant="outline" className="flex items-center gap-2">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Initializing
+              </Badge>
+            ) : error ? (
+              <Badge variant="destructive" className="flex items-center gap-2">
+                Error
+              </Badge>
+            ) : !isTradingEnabled ? (
+              <Badge variant="outline" className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-muted"></span>
+                Trading Disabled
+              </Badge>
+            ) : isInitialCooldown || isInCooldown ? (
+              <Badge variant="outline" className="flex items-center gap-2">
+                <Clock className="h-3 w-3" />
+                Cooldown (15s)
+              </Badge>
+            ) : currentEvent ? (
+              <Badge variant="secondary" className="animate-pulse flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-warning-foreground"></span>
+                Active Trade
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-green-500"></span>
+                Monitoring
+              </Badge>
+            )}
+          </div>
         </div>
       </div>
       
@@ -304,28 +390,32 @@ const PriceTracker = () => {
       
       {/* Price difference indicator */}
       <Card className={`p-6 glassmorphism transition-all duration-500 ${
-        isPriceSignificant ? 'border-warning' : ''
+        isPriceSignificant && isTradingEnabled ? 'border-warning' : ''
       }`}>
         <div className="flex flex-col items-center justify-center space-y-2">
           <div className="flex items-center gap-2">
             <ArrowUpDown className={`h-5 w-5 ${
-              isPriceSignificant ? 'text-warning' : 'text-muted-foreground'
+              isPriceSignificant && isTradingEnabled ? 'text-warning' : 'text-muted-foreground'
             }`} />
             <h3 className="text-lg font-medium">Current Price Difference</h3>
           </div>
           
           <span className={`text-3xl font-light ${
-            isPriceSignificant ? 'text-warning animate-pulse-once' : ''
+            isPriceSignificant && isTradingEnabled ? 'text-warning animate-pulse-once' : ''
           }`}>
             {directionalDifference >= 0 ? '+' : '-'}${Math.abs(directionalDifference).toFixed(2)}
           </span>
           
           <span className="text-sm text-muted-foreground">
-            {isInCooldown 
-              ? "Cooldown period: Waiting 15 seconds before the next event"
-              : isPriceSignificant 
-                ? `${directionalDifference > 0 ? 'Binance' : 'Coinbase'} price is significantly higher than ${directionalDifference > 0 ? 'Coinbase' : 'Binance'}`
-                : 'Prices are within normal range'}
+            {!isTradingEnabled
+              ? "Trading is disabled. Enable the trading bot to start monitoring for opportunities."
+              : isInitialCooldown
+                ? "Initialization: Waiting 15 seconds before monitoring starts"
+                : isInCooldown 
+                  ? "Cooldown period: Waiting 15 seconds before the next event"
+                  : isPriceSignificant 
+                    ? `${directionalDifference > 0 ? 'Binance' : 'Coinbase'} price is significantly higher than ${directionalDifference > 0 ? 'Coinbase' : 'Binance'}`
+                    : 'Prices are within normal range'}
           </span>
         </div>
       </Card>
