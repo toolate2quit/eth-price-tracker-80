@@ -1,7 +1,12 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { PriceData, PriceDifferenceRecord } from '@/types';
-import { fetchPrice } from '@/services/priceService';
+import { 
+  fetchPrice, 
+  initializeWebSockets, 
+  closeWebSockets,
+  getConnectionStatus
+} from '@/services/priceService';
 import { 
   calculatePriceDifference, 
   calculateDirectionalDifference,
@@ -14,16 +19,23 @@ import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
-import { ArrowDown, ArrowUp, Loader2 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { ArrowDown, ArrowUp, Loader2, Wifi, WifiOff } from 'lucide-react';
 
 // Constants
 const DATA_COLLECTION_INTERVAL = 5 * 60 * 1000; // 5 minutes in milliseconds
 const DATA_RETENTION_PERIOD = 30 * 24 * 60 * 60 * 1000; // 30 days in milliseconds
+const PRICE_REFRESH_INTERVAL = 2000; // 2 seconds
 
 const PriceTracker = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [websocketsEnabled, setWebsocketsEnabled] = useState(true);
+  const [connectionStatus, setConnectionStatus] = useState({
+    binance: false,
+    coinbase: false
+  });
   
   // Price data
   const [binancePrice, setBinancePrice] = useState<PriceData | null>(null);
@@ -34,6 +46,32 @@ const PriceTracker = () => {
   // Price history tracking
   const [priceRecords, setPriceRecords] = useState<PriceDifferenceRecord[]>([]);
   const lastRecordTimeRef = useRef<Date | null>(null);
+  
+  // Handle WebSocket toggle
+  const handleWebSocketToggle = (enabled: boolean) => {
+    setWebsocketsEnabled(enabled);
+    
+    if (enabled) {
+      toast({
+        title: "WebSockets Enabled",
+        description: "Connecting to exchange WebSockets...",
+      });
+      
+      const status = initializeWebSockets();
+      setConnectionStatus(status);
+    } else {
+      toast({
+        title: "WebSockets Disabled",
+        description: "Disconnected from exchange WebSockets. Using simulated data.",
+      });
+      
+      closeWebSockets();
+      setConnectionStatus({
+        binance: false,
+        coinbase: false
+      });
+    }
+  };
   
   // Check if it's time to record a new data point (every 5 minutes)
   const shouldRecordDataPoint = useCallback((now: Date) => {
@@ -93,6 +131,12 @@ const PriceTracker = () => {
         fetchPrice('coinbase')
       ]);
       
+      // Update connection status
+      if (websocketsEnabled) {
+        const currentStatus = getConnectionStatus();
+        setConnectionStatus(currentStatus);
+      }
+      
       // Store previous prices for animation
       if (binancePrice) {
         setPreviousBinancePrice(binancePrice.price);
@@ -115,16 +159,28 @@ const PriceTracker = () => {
       setError("Failed to fetch price data. Retrying...");
       console.error("Error fetching prices:", err);
     }
-  }, [binancePrice, coinbasePrice, recordPriceDifferenceDataPoint]);
+  }, [binancePrice, coinbasePrice, recordPriceDifferenceDataPoint, websocketsEnabled]);
 
-  // Initial fetch and setup interval
+  // Initialize WebSockets and setup price fetching on component mount
   useEffect(() => {
+    // Initialize WebSockets on first load
+    if (websocketsEnabled) {
+      const status = initializeWebSockets();
+      setConnectionStatus(status);
+    }
+    
+    // Fetch prices immediately
     fetchPrices();
     
-    const intervalId = setInterval(fetchPrices, 5000);
+    // Set up interval for regular price updates
+    const intervalId = setInterval(fetchPrices, PRICE_REFRESH_INTERVAL);
     
-    return () => clearInterval(intervalId);
-  }, [fetchPrices]);
+    // Cleanup on component unmount
+    return () => {
+      clearInterval(intervalId);
+      closeWebSockets();
+    };
+  }, [fetchPrices, websocketsEnabled]);
 
   // Load saved price records from localStorage on initial load
   useEffect(() => {
@@ -209,6 +265,35 @@ const PriceTracker = () => {
         </div>
         
         <div className="flex items-center space-x-4">
+          {/* WebSocket Toggle */}
+          <div className="flex items-center space-x-2">
+            <Switch
+              checked={websocketsEnabled}
+              onCheckedChange={handleWebSocketToggle}
+              id="websocket-mode"
+            />
+            <label
+              htmlFor="websocket-mode"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              {websocketsEnabled ? 'WebSockets Enabled' : 'Using Simulated Data'}
+            </label>
+          </div>
+          
+          {/* Connection Status Badges */}
+          {websocketsEnabled && (
+            <div className="flex space-x-2">
+              <Badge variant={connectionStatus.binance ? "outline" : "secondary"} className="flex items-center gap-1">
+                {connectionStatus.binance ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
+                Binance
+              </Badge>
+              <Badge variant={connectionStatus.coinbase ? "outline" : "secondary"} className="flex items-center gap-1">
+                {connectionStatus.coinbase ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
+                Coinbase
+              </Badge>
+            </div>
+          )}
+          
           {/* Status Badge */}
           <div className="flex items-center space-x-2">
             {loading ? (
