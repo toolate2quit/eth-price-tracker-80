@@ -1,32 +1,29 @@
 
-import { useState, useEffect, useCallback } from 'react';
-import { PriceData, PriceEvent } from '@/types';
-import { fetchPrice, simulateOrderExecution } from '@/services/priceService';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { PriceData, PriceDifferenceRecord } from '@/types';
+import { fetchPrice } from '@/services/priceService';
 import { 
-  isPriceDifferenceSignificant, 
-  hasPriceDifferenceInverted,
   calculatePriceDifference, 
   calculateDirectionalDifference,
   generateId,
-  hasCooldownPassed
+  formatDateTime
 } from '@/utils/priceUtils';
 import PriceDisplay from './PriceDisplay';
-import EventList from './EventList';
+import PriceHistory from './PriceHistory';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/components/ui/use-toast';
-import { Loader2, ArrowUpDown, Clock, Power } from 'lucide-react';
+import { ArrowDown, ArrowUp, Loader2 } from 'lucide-react';
+
+// Constants
+const DATA_COLLECTION_INTERVAL = 5 * 60 * 1000; // 5 minutes in milliseconds
+const DATA_RETENTION_PERIOD = 30 * 24 * 60 * 60 * 1000; // 30 days in milliseconds
 
 const PriceTracker = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
-  // Trading bot state
-  const [isTradingEnabled, setIsTradingEnabled] = useState(false);
-  const [isInitialCooldown, setIsInitialCooldown] = useState(false);
   
   // Price data
   const [binancePrice, setBinancePrice] = useState<PriceData | null>(null);
@@ -34,66 +31,60 @@ const PriceTracker = () => {
   const [previousBinancePrice, setPreviousBinancePrice] = useState<number | undefined>(undefined);
   const [previousCoinbasePrice, setPreviousCoinbasePrice] = useState<number | undefined>(undefined);
   
-  // Event tracking
-  const [events, setEvents] = useState<PriceEvent[]>([]);
-  const [currentEvent, setCurrentEvent] = useState<PriceEvent | null>(null);
-  const [lastEventEndTime, setLastEventEndTime] = useState<Date | null>(null);
-  const [isInCooldown, setIsInCooldown] = useState(false);
+  // Price history tracking
+  const [priceRecords, setPriceRecords] = useState<PriceDifferenceRecord[]>([]);
+  const lastRecordTimeRef = useRef<Date | null>(null);
   
-  // Toggle trading bot
-  const handleToggleTrading = () => {
-    const newState = !isTradingEnabled;
-    setIsTradingEnabled(newState);
+  // Check if it's time to record a new data point (every 5 minutes)
+  const shouldRecordDataPoint = useCallback((now: Date) => {
+    if (!lastRecordTimeRef.current) return true;
     
-    if (newState) {
-      // Bot turned ON
-      setIsInitialCooldown(true);
-      setLastEventEndTime(new Date()); // Start cooldown period
-      
-      toast({
-        title: "Trading Bot Enabled",
-        description: "Bot will start monitoring for trading opportunities after a 15 second initialization period.",
-        variant: "default",
-      });
-    } else {
-      // Bot turned OFF
-      if (currentEvent) {
-        // Exit current trade if one is active
-        exitCurrentTrade();
-      }
-      
-      setIsInitialCooldown(false);
-      
-      toast({
-        title: "Trading Bot Disabled",
-        description: "Bot has been turned off and will not execute any new trades.",
-        variant: "default",
-      });
-    }
-  };
+    const timeSinceLastRecord = now.getTime() - lastRecordTimeRef.current.getTime();
+    return timeSinceLastRecord >= DATA_COLLECTION_INTERVAL;
+  }, []);
   
-  // Exit current trade (when bot is turned off)
-  const exitCurrentTrade = () => {
-    if (!currentEvent) return;
-    
+  // Record a new price difference data point
+  const recordPriceDifferenceDataPoint = useCallback((binanceData: PriceData, coinbaseData: PriceData) => {
     const now = new Date();
-    const completedEvent: PriceEvent = {
-      ...currentEvent,
-      endTime: now,
-      status: 'completed',
-      forcedExit: true // Mark this event as forcibly exited
-    };
     
-    setCurrentEvent(null);
-    setEvents(prev => prev.map(e => e.id === currentEvent.id ? completedEvent : e));
-    
-    toast({
-      title: "Trade Exited",
-      description: "Current trade has been forcibly exited due to bot shutdown.",
-      variant: "destructive",
-    });
-  };
-  
+    // Only record data every 5 minutes
+    if (shouldRecordDataPoint(now)) {
+      const difference = calculateDirectionalDifference(binanceData, coinbaseData);
+      const absoluteDifference = calculatePriceDifference(binanceData, coinbaseData);
+      
+      const newRecord: PriceDifferenceRecord = {
+        id: generateId(),
+        timestamp: now,
+        binancePrice: binanceData.price,
+        coinbasePrice: coinbaseData.price,
+        difference,
+        absoluteDifference
+      };
+      
+      setPriceRecords(prevRecords => {
+        // Add new record
+        const updatedRecords = [...prevRecords, newRecord];
+        
+        // Filter out records older than 30 days
+        const cutoffTime = now.getTime() - DATA_RETENTION_PERIOD;
+        const filteredRecords = updatedRecords.filter(
+          record => record.timestamp.getTime() > cutoffTime
+        );
+        
+        // If records were removed, log it
+        if (filteredRecords.length < updatedRecords.length) {
+          console.log(`Removed ${updatedRecords.length - filteredRecords.length} records older than 30 days`);
+        }
+        
+        return filteredRecords;
+      });
+      
+      lastRecordTimeRef.current = now;
+      
+      console.log(`Recorded price difference at ${formatDateTime(now)}: $${difference.toFixed(2)}`);
+    }
+  }, [shouldRecordDataPoint]);
+
   // Fetch prices from exchanges
   const fetchPrices = useCallback(async () => {
     try {
@@ -116,166 +107,15 @@ const PriceTracker = () => {
       setLoading(false);
       setError(null);
       
-      // Only process price data if trading is enabled
-      if (isTradingEnabled) {
-        processPriceData(binanceData, coinbaseData);
+      // Record price data if both prices are available
+      if (binanceData && coinbaseData) {
+        recordPriceDifferenceDataPoint(binanceData, coinbaseData);
       }
     } catch (err) {
       setError("Failed to fetch price data. Retrying...");
       console.error("Error fetching prices:", err);
     }
-  }, [binancePrice, coinbasePrice, isTradingEnabled]);
-
-  // Process price data to detect and track events
-  const processPriceData = useCallback((binanceData: PriceData, coinbaseData: PriceData) => {
-    const difference = calculatePriceDifference(binanceData, coinbaseData);
-    const directionalDifference = calculateDirectionalDifference(binanceData, coinbaseData);
-    const priceDifferenceSignificant = isPriceDifferenceSignificant(binanceData, coinbaseData);
-    
-    // Check if cooldown period has passed
-    const cooldownPassed = hasCooldownPassed(lastEventEndTime);
-    
-    // Update cooldown state for UI
-    if ((isInCooldown || isInitialCooldown) && cooldownPassed) {
-      setIsInCooldown(false);
-      setIsInitialCooldown(false);
-    }
-    
-    // Case 1: No current event, cooldown has passed, and price difference is significant - start new event
-    if (!currentEvent && cooldownPassed && priceDifferenceSignificant) {
-      // Determine which exchange has the higher price
-      const higherExchange = directionalDifference > 0 ? 'binance' : 'coinbase';
-      const lowerExchange = directionalDifference > 0 ? 'coinbase' : 'binance';
-      
-      const newEvent: PriceEvent = {
-        id: generateId(),
-        startTime: new Date(),
-        exchangeA: higherExchange,
-        exchangeB: lowerExchange,
-        initialDifference: difference,
-        maxDifference: difference,
-        maxDifferenceTime: new Date(),
-        status: 'active'
-      };
-      
-      setCurrentEvent(newEvent);
-      setEvents(prev => [newEvent, ...prev]);
-      
-      // Simulate trade execution
-      simulateTradeExecution(higherExchange, lowerExchange, binanceData.price, coinbaseData.price);
-      
-      toast({
-        title: "Price event detected",
-        description: `${higherExchange.charAt(0).toUpperCase() + higherExchange.slice(1)} price is $${difference.toFixed(2)} higher than ${lowerExchange}`,
-        variant: "default",
-      });
-    }
-    
-    // Case 2: Current event exists and price difference is still significant but not inverted - update max difference if needed
-    else if (currentEvent && !hasPriceDifferenceInverted(currentEvent.exchangeA, binanceData, coinbaseData)) {
-      if (difference > currentEvent.maxDifference) {
-        const updatedEvent: PriceEvent = {
-          ...currentEvent,
-          maxDifference: difference,
-          maxDifferenceTime: new Date()
-        };
-        
-        setCurrentEvent(updatedEvent);
-        setEvents(prev => prev.map(e => e.id === currentEvent.id ? updatedEvent : e));
-        
-        toast({
-          title: "New maximum difference",
-          description: `New maximum price difference of $${difference.toFixed(2)} detected`,
-          variant: "default",
-        });
-      }
-    }
-    
-    // Case 3: Current event exists and price difference has inverted - close event and start cooldown
-    else if (currentEvent && hasPriceDifferenceInverted(currentEvent.exchangeA, binanceData, coinbaseData)) {
-      const now = new Date();
-      const completedEvent: PriceEvent = {
-        ...currentEvent,
-        endTime: now,
-        status: 'completed'
-      };
-      
-      setCurrentEvent(null);
-      setLastEventEndTime(now);
-      setIsInCooldown(true);
-      setEvents(prev => prev.map(e => e.id === currentEvent.id ? completedEvent : e));
-      
-      toast({
-        title: "Price event completed",
-        description: `Price difference inverted: now ${currentEvent.exchangeB.charAt(0).toUpperCase() + currentEvent.exchangeB.slice(1)} is higher than ${currentEvent.exchangeA}. Next event detection in 15 seconds.`,
-        variant: "default",
-      });
-    }
-  }, [currentEvent, lastEventEndTime, isInCooldown, isInitialCooldown, toast]);
-
-  // Simulate trade execution
-  const simulateTradeExecution = async (
-    sellExchange: string, 
-    buyExchange: string,
-    binancePrice: number,
-    coinbasePrice: number
-  ) => {
-    try {
-      // Determine actual prices based on selected exchanges
-      const sellPrice = sellExchange === 'binance' ? binancePrice : coinbasePrice;
-      const buyPrice = buyExchange === 'binance' ? binancePrice : coinbasePrice;
-      
-      // Simulate order execution
-      const [sellResult, buyResult] = await Promise.all([
-        simulateOrderExecution(sellExchange, sellPrice, 'sell'),
-        simulateOrderExecution(buyExchange, buyPrice, 'buy')
-      ]);
-      
-      // Calculate theoretical profit
-      const tradeAmount = 1000; // $1000 worth
-      const tokenAmount = tradeAmount / sellPrice;
-      const buyValue = tokenAmount * buyPrice;
-      const profit = tradeAmount - buyValue;
-      
-      console.log('Trade execution results:', {
-        sellExchange,
-        buyExchange,
-        sellPrice,
-        buyPrice,
-        sellExecutionPrice: sellResult.executionPrice,
-        buyExecutionPrice: buyResult.executionPrice,
-        profit: profit.toFixed(2),
-        success: sellResult.success && buyResult.success
-      });
-      
-      if (!sellResult.success || !buyResult.success) {
-        toast({
-          title: "Trade execution failed",
-          description: `One or more orders failed to execute`,
-          variant: "destructive",
-        });
-      } else if (profit > 0) {
-        toast({
-          title: "Trade execution",
-          description: `Trade executed with profit: $${profit.toFixed(2)}`,
-          variant: "default",
-        });
-      } else {
-        toast({
-          title: "Trade execution",
-          description: `Trade executed with loss: $${Math.abs(profit).toFixed(2)}`,
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error('Trade execution error:', error);
-      toast({
-        title: "Trade execution error",
-        description: "Failed to execute trade",
-        variant: "destructive",
-      });
-    }
-  };
+  }, [binancePrice, coinbasePrice, recordPriceDifferenceDataPoint]);
 
   // Initial fetch and setup interval
   useEffect(() => {
@@ -286,6 +126,69 @@ const PriceTracker = () => {
     return () => clearInterval(intervalId);
   }, [fetchPrices]);
 
+  // Load saved price records from localStorage on initial load
+  useEffect(() => {
+    try {
+      const savedRecords = localStorage.getItem('priceRecords');
+      if (savedRecords) {
+        const parsedRecords = JSON.parse(savedRecords);
+        
+        // Convert string dates back to Date objects
+        const recordsWithDates = parsedRecords.map((record: any) => ({
+          ...record,
+          timestamp: new Date(record.timestamp)
+        }));
+        
+        // Filter out records older than retention period
+        const now = new Date();
+        const cutoffTime = now.getTime() - DATA_RETENTION_PERIOD;
+        const filteredRecords = recordsWithDates.filter(
+          (record: PriceDifferenceRecord) => record.timestamp.getTime() > cutoffTime
+        );
+        
+        setPriceRecords(filteredRecords);
+        console.log(`Loaded ${filteredRecords.length} price records from storage`);
+        
+        // Set last record time if we have records
+        if (filteredRecords.length > 0) {
+          const latestRecord = filteredRecords.reduce((latest, record) => 
+            record.timestamp > latest.timestamp ? record : latest, filteredRecords[0]);
+          lastRecordTimeRef.current = latestRecord.timestamp;
+        }
+      }
+    } catch (error) {
+      console.error('Error loading saved price records:', error);
+      // If there's an error, we'll start with an empty array
+    }
+  }, []);
+  
+  // Save price records to localStorage whenever they change
+  useEffect(() => {
+    if (priceRecords.length > 0) {
+      try {
+        localStorage.setItem('priceRecords', JSON.stringify(priceRecords));
+      } catch (error) {
+        console.error('Error saving price records:', error);
+        // If localStorage is full, we might need to trim older records
+        if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+          toast({
+            title: "Storage limit reached",
+            description: "Some older price data may be lost due to storage constraints",
+            variant: "destructive",
+          });
+          
+          // Remove oldest 20% of records
+          const recordsToKeep = Math.floor(priceRecords.length * 0.8);
+          const trimmedRecords = [...priceRecords]
+            .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+            .slice(0, recordsToKeep);
+          
+          setPriceRecords(trimmedRecords);
+        }
+      }
+    }
+  }, [priceRecords, toast]);
+
   // Calculate current price difference for display
   const currentDifference = binancePrice && coinbasePrice
     ? calculatePriceDifference(binancePrice, coinbasePrice)
@@ -295,37 +198,17 @@ const PriceTracker = () => {
   const directionalDifference = binancePrice && coinbasePrice
     ? calculateDirectionalDifference(binancePrice, coinbasePrice)
     : 0;
-  
-  // Determine if current difference meets our tracking condition
-  const isPriceSignificant = binancePrice && coinbasePrice && 
-    isPriceDifferenceSignificant(binancePrice, coinbasePrice);
 
   return (
     <div className="space-y-8">
-      {/* Header with status indicator and trading switch */}
+      {/* Header */}
       <div className="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0">
         <div>
           <h1 className="text-4xl font-light tracking-tight">Ethereum Price Tracker</h1>
-          <p className="text-sm text-muted-foreground">Example A: Tracking price differences between exchanges</p>
+          <p className="text-sm text-muted-foreground">Tracking price differences between exchanges over time</p>
         </div>
         
         <div className="flex items-center space-x-4">
-          {/* Trading Bot Switch */}
-          <div className="flex items-center space-x-2">
-            <Switch
-              checked={isTradingEnabled}
-              onCheckedChange={handleToggleTrading}
-              id="trading-mode"
-            />
-            <label
-              htmlFor="trading-mode"
-              className="text-sm font-medium cursor-pointer flex items-center gap-1"
-            >
-              <Power className={`h-4 w-4 ${isTradingEnabled ? 'text-green-500' : 'text-muted-foreground'}`} />
-              Trading Bot {isTradingEnabled ? 'Enabled' : 'Disabled'}
-            </label>
-          </div>
-          
           {/* Status Badge */}
           <div className="flex items-center space-x-2">
             {loading ? (
@@ -337,25 +220,10 @@ const PriceTracker = () => {
               <Badge variant="destructive" className="flex items-center gap-2">
                 Error
               </Badge>
-            ) : !isTradingEnabled ? (
-              <Badge variant="outline" className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-muted"></span>
-                Trading Disabled
-              </Badge>
-            ) : isInitialCooldown || isInCooldown ? (
-              <Badge variant="outline" className="flex items-center gap-2">
-                <Clock className="h-3 w-3" />
-                Cooldown (15s)
-              </Badge>
-            ) : currentEvent ? (
-              <Badge variant="secondary" className="animate-pulse flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-warning-foreground"></span>
-                Active Trade
-              </Badge>
             ) : (
               <Badge variant="outline" className="flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-green-500"></span>
-                Monitoring
+                Tracking Active
               </Badge>
             )}
           </div>
@@ -389,41 +257,40 @@ const PriceTracker = () => {
       </div>
       
       {/* Price difference indicator */}
-      <Card className={`p-6 glassmorphism transition-all duration-500 ${
-        isPriceSignificant && isTradingEnabled ? 'border-warning' : ''
-      }`}>
+      <Card className="p-6 glassmorphism transition-all duration-500">
         <div className="flex flex-col items-center justify-center space-y-2">
           <div className="flex items-center gap-2">
-            <ArrowUpDown className={`h-5 w-5 ${
-              isPriceSignificant && isTradingEnabled ? 'text-warning' : 'text-muted-foreground'
-            }`} />
+            {directionalDifference > 0 ? (
+              <ArrowUp className="h-5 w-5 text-green-500" />
+            ) : (
+              <ArrowDown className="h-5 w-5 text-red-500" />
+            )}
             <h3 className="text-lg font-medium">Current Price Difference</h3>
           </div>
           
-          <span className={`text-3xl font-light ${
-            isPriceSignificant && isTradingEnabled ? 'text-warning animate-pulse-once' : ''
-          }`}>
+          <span className="text-3xl font-light">
             {directionalDifference >= 0 ? '+' : '-'}${Math.abs(directionalDifference).toFixed(2)}
           </span>
           
           <span className="text-sm text-muted-foreground">
-            {!isTradingEnabled
-              ? "Trading is disabled. Enable the trading bot to start monitoring for opportunities."
-              : isInitialCooldown
-                ? "Initialization: Waiting 15 seconds before monitoring starts"
-                : isInCooldown 
-                  ? "Cooldown period: Waiting 15 seconds before the next event"
-                  : isPriceSignificant 
-                    ? `${directionalDifference > 0 ? 'Binance' : 'Coinbase'} price is significantly higher than ${directionalDifference > 0 ? 'Coinbase' : 'Binance'}`
-                    : 'Prices are within normal range'}
+            {directionalDifference > 0 
+              ? 'Binance price is higher than Coinbase' 
+              : 'Coinbase price is higher than Binance'}
           </span>
+          
+          <div className="text-xs text-muted-foreground mt-2">
+            <span>Data points collected: {priceRecords.length}</span>
+            {lastRecordTimeRef.current && (
+              <span> · Last record: {formatDateTime(lastRecordTimeRef.current)}</span>
+            )}
+          </div>
         </div>
       </Card>
       
       <Separator />
       
-      {/* Event list */}
-      <EventList events={events} />
+      {/* Price history chart */}
+      <PriceHistory records={priceRecords} />
     </div>
   );
 };

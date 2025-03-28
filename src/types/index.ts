@@ -15,11 +15,21 @@ export interface PriceEvent {
   maxDifference: number;
   maxDifferenceTime?: Date;
   status: 'active' | 'completed';
-  forcedExit?: boolean; // New property to track if the trade was forcibly exited
+  forcedExit?: boolean;
+}
+
+export interface PriceDifferenceRecord {
+  id: string;
+  timestamp: Date;
+  binancePrice: number;
+  coinbasePrice: number;
+  difference: number;
+  absoluteDifference: number;
 }
 
 export interface ExportData {
   events: PriceEvent[];
+  priceRecords: PriceDifferenceRecord[];
   exportTime: Date;
   source: string;
 }
