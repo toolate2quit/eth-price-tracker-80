@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { PriceData, PriceDifferenceRecord } from '@/types';
 import { 
@@ -60,9 +61,20 @@ const PriceTracker = () => {
   // Price history tracking
   const [priceRecords, setPriceRecords] = useState<PriceDifferenceRecord[]>([]);
   const lastRecordTimeRef = useRef<Date | null>(null);
+
+  // Use a ref to track the last state change to prevent flashing
+  const lastStateChangeRef = useRef<number>(Date.now());
+  const stateChangeDebounceTime = 500; // 500ms debounce time
   
-  // Handle WebSocket toggle
+  // Handle WebSocket toggle with debouncing to prevent rapid state changes
   const handleWebSocketToggle = (enabled: boolean) => {
+    // Only process toggle if sufficient time has passed since last change
+    const now = Date.now();
+    if (now - lastStateChangeRef.current < stateChangeDebounceTime) {
+      return; // Ignore rapid toggles
+    }
+    
+    lastStateChangeRef.current = now;
     setWebsocketsEnabled(enabled);
     
     if (enabled) {
@@ -95,8 +107,15 @@ const PriceTracker = () => {
     }
   };
   
-  // Handle simulated data toggle
+  // Handle simulated data toggle with debouncing to prevent rapid state changes
   const handleSimulatedDataToggle = (enabled: boolean) => {
+    // Only process toggle if sufficient time has passed since last change
+    const now = Date.now();
+    if (now - lastStateChangeRef.current < stateChangeDebounceTime) {
+      return; // Ignore rapid toggles
+    }
+    
+    lastStateChangeRef.current = now;
     setSimulatedDataMode(enabled);
     toggleSimulatedData(enabled);
     
@@ -315,12 +334,12 @@ const PriceTracker = () => {
           {/* Data Source Toggle with ToggleGroup */}
           <div className="flex items-center space-x-2">
             <span className="text-sm font-medium">Data Source:</span>
-            <ToggleGroup type="single" defaultValue="simulated" aria-label="Data Source">
+            <ToggleGroup type="single" value={simulatedDataMode ? "simulated" : "real"} aria-label="Data Source">
               <ToggleGroupItem 
                 value="simulated" 
                 aria-label="Simulated Data"
                 onClick={() => handleSimulatedDataToggle(true)}
-                data-state={simulatedDataMode ? 'on' : 'off'}
+                disabled={websocketsEnabled} // Disable when websockets are enabled
                 className="flex items-center gap-1"
               >
                 <ActivitySquare className="h-3 w-3" />
@@ -330,7 +349,6 @@ const PriceTracker = () => {
                 value="real" 
                 aria-label="Real Data"
                 onClick={() => handleSimulatedDataToggle(false)}
-                data-state={!simulatedDataMode ? 'on' : 'off'}
                 className="flex items-center gap-1"
               >
                 <Wifi className="h-3 w-3" />
@@ -345,7 +363,7 @@ const PriceTracker = () => {
               checked={websocketsEnabled}
               onCheckedChange={handleWebSocketToggle}
               id="websocket-mode"
-              disabled={simulatedDataMode}
+              disabled={simulatedDataMode} // Only enabled when not in simulated mode
             />
             <label
               htmlFor="websocket-mode"
@@ -355,36 +373,39 @@ const PriceTracker = () => {
             </label>
           </div>
           
-          {/* Reset connection button */}
+          {/* Connection status and controls */}
           {!simulatedDataMode && (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleResetConnections}
-              disabled={isResetting}
-              className="flex items-center gap-1"
-            >
-              {isResetting ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
-              ) : (
-                <RefreshCw className="h-3 w-3" />
+            <>
+              {/* Reset connection button */}
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleResetConnections}
+                disabled={isResetting || simulatedDataMode}
+                className="flex items-center gap-1"
+              >
+                {isResetting ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-3 w-3" />
+                )}
+                Reset Connections
+              </Button>
+              
+              {/* Connection Status Badges */}
+              {websocketsEnabled && (
+                <div className="flex space-x-2">
+                  <Badge variant={connectionStatus.binance ? "outline" : "secondary"} className="flex items-center gap-1">
+                    {connectionStatus.binance ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
+                    Binance
+                  </Badge>
+                  <Badge variant={connectionStatus.coinbase ? "outline" : "secondary"} className="flex items-center gap-1">
+                    {connectionStatus.coinbase ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
+                    Coinbase
+                  </Badge>
+                </div>
               )}
-              Reset Connections
-            </Button>
-          )}
-          
-          {/* Connection Status Badges */}
-          {websocketsEnabled && !simulatedDataMode && (
-            <div className="flex space-x-2">
-              <Badge variant={connectionStatus.binance ? "outline" : "secondary"} className="flex items-center gap-1">
-                {connectionStatus.binance ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
-                Binance
-              </Badge>
-              <Badge variant={connectionStatus.coinbase ? "outline" : "secondary"} className="flex items-center gap-1">
-                {connectionStatus.coinbase ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
-                Coinbase
-              </Badge>
-            </div>
+            </>
           )}
           
           {/* Status Badge */}

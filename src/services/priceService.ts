@@ -24,7 +24,7 @@ const RECONNECT_DELAY_MS = 3000; // 3 seconds initial delay
 const MAX_RECONNECT_DELAY_MS = 30000; // 30 seconds max delay
 
 // Set this to true to force using simulated data (for testing/debugging)
-let forceSimulatedData = false;
+let forceSimulatedData = true; // Start with simulated data by default
 
 // Helper for exponential backoff
 const getReconnectDelay = (attempts: number): number => {
@@ -236,6 +236,14 @@ const initCoinbaseWebSocket = (): void => {
 // Initialize WebSocket connections
 export const initializeWebSockets = (): { binance: boolean; coinbase: boolean } => {
   try {
+    // Don't try to initialize if simulated data is forced
+    if (forceSimulatedData) {
+      console.log('Simulated data mode is enabled. Not initializing WebSockets.');
+      connectionStatus.binance = false;
+      connectionStatus.coinbase = false;
+      return { ...connectionStatus };
+    }
+    
     // Reset reconnection attempts
     binanceReconnectAttempts = 0;
     coinbaseReconnectAttempts = 0;
@@ -264,6 +272,8 @@ export const closeWebSockets = (): void => {
   
   connectionStatus.binance = false;
   connectionStatus.coinbase = false;
+  
+  console.log('WebSocket connections closed');
 };
 
 // Get latest price from the WebSocket connections
@@ -313,6 +323,16 @@ export const getConnectionStatus = (): { binance: boolean; coinbase: boolean } =
 
 // Reset connection states and attempt to reconnect
 export const resetConnections = (): void => {
+  // If simulated data is forced, don't attempt to reconnect
+  if (forceSimulatedData) {
+    console.log('Simulated data mode is enabled. Not resetting connections.');
+    toast({
+      title: "Simulated Data Mode",
+      description: "Cannot reset connections while in simulated data mode.",
+    });
+    return;
+  }
+  
   // Reset reconnect attempts
   binanceReconnectAttempts = 0;
   coinbaseReconnectAttempts = 0;
@@ -331,22 +351,26 @@ export const resetConnections = (): void => {
 
 // Toggle between real and simulated data
 export const toggleSimulatedData = (useSimulated: boolean): void => {
-  forceSimulatedData = useSimulated;
+  console.log(`Setting simulated data mode to: ${useSimulated}`);
   
-  if (useSimulated) {
-    // Close any existing connections
-    closeWebSockets();
-    toast({
-      title: "Simulated Data Mode",
-      description: "Now using simulated data for price information.",
-    });
-  } else {
-    // Try to reconnect
-    resetConnections();
-    toast({
-      title: "Real Data Mode",
-      description: "Attempting to connect to exchange WebSockets for real-time data.",
-    });
+  // Only take action if the state is actually changing
+  if (forceSimulatedData !== useSimulated) {
+    forceSimulatedData = useSimulated;
+    
+    if (useSimulated) {
+      // Close any existing connections
+      closeWebSockets();
+      toast({
+        title: "Simulated Data Mode",
+        description: "Now using simulated data for price information.",
+      });
+    } else {
+      // Try to reconnect
+      toast({
+        title: "Real Data Mode",
+        description: "Attempting to connect to exchange WebSockets for real-time data.",
+      });
+    }
   }
 };
 
