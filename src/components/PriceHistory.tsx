@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from 'react';
 import { PriceDifferenceRecord } from '@/types';
 import { Card } from '@/components/ui/card';
@@ -92,12 +91,22 @@ const PriceHistory: React.FC<PriceHistoryProps> = ({ records }) => {
           coinbasePrice: record.coinbasePrice,
           difference: record.difference,
           absoluteDifference: record.absoluteDifference,
+          // Add separate properties for each exchange's difference from the other
+          binanceHigher: record.difference > 0 ? record.difference : 0,
+          coinbaseHigher: record.difference < 0 ? -record.difference : 0, // Make this positive for display
           count: 1
         });
       } else {
         const existing = groupedData.get(timeKey);
         existing.binancePrice = (existing.binancePrice * existing.count + record.binancePrice) / (existing.count + 1);
         existing.coinbasePrice = (existing.coinbasePrice * existing.count + record.coinbasePrice) / (existing.count + 1);
+        
+        // Update the directional differences
+        if (record.difference > 0 && record.difference > existing.binanceHigher) {
+          existing.binanceHigher = record.difference;
+        } else if (record.difference < 0 && -record.difference > existing.coinbaseHigher) {
+          existing.coinbaseHigher = -record.difference;
+        }
         
         // For difference, we want to keep the maximum difference in this interval
         if (Math.abs(record.difference) > Math.abs(existing.difference)) {
@@ -127,8 +136,9 @@ const PriceHistory: React.FC<PriceHistoryProps> = ({ records }) => {
     if (!chartData.length) return 100;
     
     if (chartType === 'difference') {
-      const max = Math.max(...chartData.map(d => Math.abs(d.difference)));
-      return Math.ceil(max * 1.2); // Add 20% padding
+      const maxPositive = Math.max(...chartData.map(d => d.binanceHigher || 0));
+      const maxNegative = Math.max(...chartData.map(d => d.coinbaseHigher || 0));
+      return Math.ceil(Math.max(maxPositive, maxNegative) * 1.2); // Add 20% padding
     } else {
       const max = Math.max(...chartData.map(d => d.absoluteDifference));
       return Math.ceil(max * 1.2); // Add 20% padding
@@ -241,15 +251,14 @@ const PriceHistory: React.FC<PriceHistoryProps> = ({ records }) => {
                 <Bar dataKey="coinbasePrice" name="Coinbase" fill="#0052FF" />
               </BarChart>
             </ResponsiveContainer>
-          ) : (
+          ) : chartType === 'difference' ? (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="time" />
                 <YAxis 
-                  domain={chartType === 'difference' ? 
-                    [-(getMaxDifference()), getMaxDifference()] : 
-                    [0, getMaxDifference()]} 
+                  domain={[-(getMaxDifference()), getMaxDifference()]}
+                  tickFormatter={(value) => Math.abs(value).toString()}
                 />
                 <Tooltip
                   content={({ active, payload }) => {
@@ -269,15 +278,37 @@ const PriceHistory: React.FC<PriceHistoryProps> = ({ records }) => {
                   }}
                 />
                 <ReferenceLine y={0} stroke="#666" />
-                {chartType === 'difference' ? (
-                  <Bar dataKey={chartType} name="Price Difference" fill="#10B981">
-                    {chartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.difference >= 0 ? "#10B981" : "#EF4444"} />
-                    ))}
-                  </Bar>
-                ) : (
-                  <Bar dataKey={chartType} name="Absolute Difference" fill="#10B981" />
-                )}
+                <Bar dataKey="binanceHigher" name="Binance Higher" fill="#10B981" />
+                <Bar dataKey="coinbaseHigher" name="Coinbase Higher" fill="#EF4444" stackId="stack" />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="time" />
+                <YAxis 
+                  domain={[0, getMaxDifference()]} 
+                />
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      const data = payload[0].payload;
+                      return (
+                        <div className="rounded-lg border bg-background p-2 shadow-md">
+                          <p className="font-medium">{formatDateTime(data.timestamp)}</p>
+                          <p>Binance: {formatPrice(data.binancePrice)}</p>
+                          <p>Coinbase: {formatPrice(data.coinbasePrice)}</p>
+                          <p>Diff: {data.difference >= 0 ? '+' : ''}{formatPrice(data.difference)}</p>
+                          <p>Samples: {data.count}</p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <ReferenceLine y={0} stroke="#666" />
+                <Bar dataKey="absoluteDifference" name="Absolute Difference" fill="#10B981" />
               </BarChart>
             </ResponsiveContainer>
           )}
