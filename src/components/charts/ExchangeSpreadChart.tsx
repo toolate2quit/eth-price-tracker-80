@@ -1,6 +1,5 @@
 
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import PriceChartTooltip from './PriceChartTooltip';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Legend } from 'recharts';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
 interface ExchangeSpreadChartProps {
@@ -21,7 +20,8 @@ const ExchangeSpreadChart: React.FC<ExchangeSpreadChartProps> = ({
       <BarChart 
         data={chartData} 
         margin={{ top: 10, right: 30, left: 20, bottom: 0 }}
-        barCategoryGap="20%"
+        barGap={0}
+        barSize={30}
       >
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="time" />
@@ -30,7 +30,6 @@ const ExchangeSpreadChart: React.FC<ExchangeSpreadChartProps> = ({
           tickFormatter={formatYAxisTick}
           label={{ value: 'Price Spread (USD)', angle: -90, position: 'insideLeft', offset: 0, style: { textAnchor: 'middle' } }}
         />
-        <Tooltip content={<PriceChartTooltip />} />
         <Legend 
           wrapperStyle={{ paddingTop: '10px' }}
           formatter={(value) => (

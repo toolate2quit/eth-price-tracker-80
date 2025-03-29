@@ -1,3 +1,4 @@
+
 import { PriceDifferenceRecord } from '@/types';
 
 export const formatTime = (date: Date) => {
@@ -66,14 +67,13 @@ export const getFormattedData = (records: PriceDifferenceRecord[], timeRange: st
       existing.binancePrice = record.binancePrice;
       existing.coinbasePrice = record.coinbasePrice;
       
-      // Recalculate the difference metrics based on current prices
+      // Recalculate the difference metrics
       const diff = record.binancePrice - record.coinbasePrice;
       existing.difference = diff;
       existing.absoluteDifference = Math.abs(diff);
       existing.spread = Math.abs(diff);
       
       // Update the exchange-specific difference values
-      // This is key: we store the actual spread in the appropriate column based on which exchange is higher
       existing.binanceHigher = diff > 0 ? Math.abs(diff) : 0;
       existing.coinbaseHigher = diff < 0 ? Math.abs(diff) : 0;
       
