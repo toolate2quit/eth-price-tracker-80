@@ -1,20 +1,21 @@
-
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { PriceDifferenceRecord } from '@/types';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { formatDateTime, formatPrice } from '@/utils/priceUtils';
-import { CalendarDays, ChartLine, Clock } from 'lucide-react';
+import { ArrowDown, ArrowUp, CalendarDays, ChartLine, Clock } from 'lucide-react';
 import {
-  Area,
-  AreaChart,
+  Bar,
+  BarChart,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  ResponsiveContainer
+  ResponsiveContainer,
+  ReferenceLine,
+  Legend
 } from 'recharts';
 
 interface PriceHistoryProps {
@@ -25,7 +26,28 @@ const PriceHistory: React.FC<PriceHistoryProps> = ({ records }) => {
   const [timeRange, setTimeRange] = useState<string>('day');
   const [chartType, setChartType] = useState<string>('difference');
 
-  // Format data for the chart
+  // Calculate max differences in each direction
+  const { maxBinanceHigher, maxCoinbaseHigher } = useMemo(() => {
+    if (!records.length) return { maxBinanceHigher: 0, maxCoinbaseHigher: 0 };
+    
+    let maxBinanceHigher = 0;
+    let maxCoinbaseHigher = 0;
+    
+    records.forEach(record => {
+      // Positive difference means Binance price is higher
+      if (record.difference > 0 && record.difference > maxBinanceHigher) {
+        maxBinanceHigher = record.difference;
+      } 
+      // Negative difference means Coinbase price is higher
+      else if (record.difference < 0 && Math.abs(record.difference) > maxCoinbaseHigher) {
+        maxCoinbaseHigher = Math.abs(record.difference);
+      }
+    });
+    
+    return { maxBinanceHigher, maxCoinbaseHigher };
+  }, [records]);
+
+  // Group data into 5-minute intervals
   const getFormattedData = () => {
     if (!records.length) return [];
 
@@ -44,15 +66,52 @@ const PriceHistory: React.FC<PriceHistoryProps> = ({ records }) => {
     // Sort by timestamp
     filteredRecords.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 
-    // Map to chart format
-    return filteredRecords.map(record => ({
-      timestamp: record.timestamp,
-      time: formatTime(record.timestamp),
-      difference: record.difference,
-      absoluteDifference: record.absoluteDifference,
-      binancePrice: record.binancePrice,
-      coinbasePrice: record.coinbasePrice,
-    }));
+    // Group by 5-minute intervals
+    const groupedData = new Map();
+    
+    filteredRecords.forEach(record => {
+      // Round to the nearest 5-minute interval
+      const timestamp = record.timestamp;
+      const minutes = timestamp.getMinutes();
+      const roundedMinutes = Math.floor(minutes / 5) * 5;
+      
+      const roundedTimestamp = new Date(timestamp);
+      roundedTimestamp.setMinutes(roundedMinutes);
+      roundedTimestamp.setSeconds(0);
+      roundedTimestamp.setMilliseconds(0);
+      
+      const timeKey = roundedTimestamp.getTime();
+      
+      if (!groupedData.has(timeKey)) {
+        groupedData.set(timeKey, {
+          timestamp: roundedTimestamp,
+          time: formatTime(roundedTimestamp),
+          binancePrice: record.binancePrice,
+          coinbasePrice: record.coinbasePrice,
+          difference: record.difference,
+          absoluteDifference: record.absoluteDifference,
+          count: 1
+        });
+      } else {
+        const existing = groupedData.get(timeKey);
+        existing.binancePrice = (existing.binancePrice * existing.count + record.binancePrice) / (existing.count + 1);
+        existing.coinbasePrice = (existing.coinbasePrice * existing.count + record.coinbasePrice) / (existing.count + 1);
+        
+        // For difference, we want to keep the maximum difference in this interval
+        if (Math.abs(record.difference) > Math.abs(existing.difference)) {
+          existing.difference = record.difference;
+        }
+        
+        if (record.absoluteDifference > existing.absoluteDifference) {
+          existing.absoluteDifference = record.absoluteDifference;
+        }
+        
+        existing.count += 1;
+      }
+    });
+
+    // Convert Map to array
+    return Array.from(groupedData.values());
   };
 
   const formatTime = (date: Date) => {
@@ -130,6 +189,24 @@ const PriceHistory: React.FC<PriceHistoryProps> = ({ records }) => {
           </div>
         </div>
         
+        {/* Max difference indicators */}
+        <div className="flex justify-between items-center px-4 py-2 bg-muted/30 rounded-lg">
+          <div className="flex items-center gap-2">
+            <ArrowUp className="h-4 w-4 text-green-500" />
+            <div>
+              <span className="text-sm text-muted-foreground">Max Binance Higher:</span>
+              <span className="ml-2 font-medium">+${maxBinanceHigher.toFixed(2)}</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <ArrowDown className="h-4 w-4 text-red-500" />
+            <div>
+              <span className="text-sm text-muted-foreground">Max Coinbase Higher:</span>
+              <span className="ml-2 font-medium">+${maxCoinbaseHigher.toFixed(2)}</span>
+            </div>
+          </div>
+        </div>
+        
         <div className="h-[400px] w-full mt-4">
           {chartData.length === 0 ? (
             <div className="h-full w-full flex items-center justify-center">
@@ -137,20 +214,10 @@ const PriceHistory: React.FC<PriceHistoryProps> = ({ records }) => {
             </div>
           ) : chartType === 'prices' ? (
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="binanceColor" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#F0B90B" stopOpacity={0.8} />
-                    <stop offset="95%" stopColor="#F0B90B" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="coinbaseColor" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#0052FF" stopOpacity={0.8} />
-                    <stop offset="95%" stopColor="#0052FF" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
+              <BarChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="time" />
                 <YAxis domain={[getPriceRange().min, getPriceRange().max]} />
-                <CartesianGrid strokeDasharray="3 3" />
                 <Tooltip
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
@@ -167,33 +234,14 @@ const PriceHistory: React.FC<PriceHistoryProps> = ({ records }) => {
                     return null;
                   }}
                 />
-                <Area
-                  type="monotone"
-                  dataKey="binancePrice"
-                  name="Binance"
-                  stroke="#F0B90B"
-                  fillOpacity={1}
-                  fill="url(#binanceColor)"
-                />
-                <Area
-                  type="monotone"
-                  dataKey="coinbasePrice"
-                  name="Coinbase"
-                  stroke="#0052FF"
-                  fillOpacity={1}
-                  fill="url(#coinbaseColor)"
-                />
-              </AreaChart>
+                <Legend />
+                <Bar dataKey="binancePrice" name="Binance" fill="#F0B90B" />
+                <Bar dataKey="coinbasePrice" name="Coinbase" fill="#0052FF" />
+              </BarChart>
             </ResponsiveContainer>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="differenceColor" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.8} />
-                    <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
+              <BarChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="time" />
                 <YAxis 
@@ -211,28 +259,29 @@ const PriceHistory: React.FC<PriceHistoryProps> = ({ records }) => {
                           <p>Binance: {formatPrice(data.binancePrice)}</p>
                           <p>Coinbase: {formatPrice(data.coinbasePrice)}</p>
                           <p>Diff: {data.difference >= 0 ? '+' : ''}{formatPrice(data.difference)}</p>
+                          <p>Samples: {data.count}</p>
                         </div>
                       );
                     }
                     return null;
                   }}
                 />
-                <Area
-                  type="monotone"
+                <ReferenceLine y={0} stroke="#666" />
+                <Bar 
                   dataKey={chartType}
                   name={chartType === 'difference' ? 'Price Difference' : 'Absolute Difference'}
-                  stroke="#10B981"
-                  fillOpacity={1}
-                  fill="url(#differenceColor)"
+                  fill={(chartType === 'difference') ? 
+                    (datum => (datum.difference >= 0 ? "#10B981" : "#EF4444")) : "#10B981"
+                  }
                 />
-              </AreaChart>
+              </BarChart>
             </ResponsiveContainer>
           )}
         </div>
         
         <div className="text-xs text-muted-foreground">
           <p>
-            Showing {chartData.length} data points. 
+            Showing {chartData.length} intervals with data grouped in 5-minute bars. 
             Data is collected every 5 minutes and stored for 30 days.
           </p>
         </div>
