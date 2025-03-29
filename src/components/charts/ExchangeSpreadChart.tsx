@@ -15,7 +15,7 @@ const ExchangeSpreadChart: React.FC<ExchangeSpreadChartProps> = ({
   formatYAxisTick 
 }) => {
   return (
-    <ResponsiveContainer width="100%" height="100%" className="animate-fade-in">
+    <ResponsiveContainer width="100%" height="100%">
       <BarChart data={chartData} margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="time" />
@@ -47,18 +47,12 @@ const ExchangeSpreadChart: React.FC<ExchangeSpreadChartProps> = ({
           name="Binance Higher" 
           fill="#F0B90B" 
           stackId="a"
-          animationDuration={1500}
-          animationEasing="ease-in-out"
-          className="hover:opacity-80 transition-opacity"
         />
         <Bar 
           dataKey="coinbaseHigher" 
           name="Coinbase Higher" 
           fill="#0052FF" 
           stackId="b"
-          animationDuration={1500}
-          animationEasing="ease-in-out"
-          className="hover:opacity-80 transition-opacity"
         />
       </BarChart>
     </ResponsiveContainer>

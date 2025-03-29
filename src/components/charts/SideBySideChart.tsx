@@ -17,7 +17,7 @@ const SideBySideChart: React.FC<SideBySideChartProps> = ({
   formatYAxisTick 
 }) => {
   return (
-    <ResponsiveContainer width="100%" height="100%" className="animate-fade-in">
+    <ResponsiveContainer width="100%" height="100%">
       <BarChart 
         data={chartData} 
         margin={{ top: 10, right: 30, left: 20, bottom: 0 }}
@@ -48,18 +48,12 @@ const SideBySideChart: React.FC<SideBySideChartProps> = ({
         <Bar 
           dataKey="binancePrice" 
           name="Binance" 
-          fill="#F0B90B"
-          animationDuration={1500}
-          animationEasing="ease-in-out"
-          className="hover:opacity-80 transition-opacity" 
+          fill="#F0B90B" 
         />
         <Bar 
           dataKey="coinbasePrice" 
           name="Coinbase" 
-          fill="#0052FF"
-          animationDuration={1500}
-          animationEasing="ease-in-out"
-          className="hover:opacity-80 transition-opacity" 
+          fill="#0052FF" 
         />
       </BarChart>
     </ResponsiveContainer>

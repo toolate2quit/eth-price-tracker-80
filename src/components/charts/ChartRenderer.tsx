@@ -12,17 +12,11 @@ interface ChartRendererProps {
 }
 
 const ChartRenderer: React.FC<ChartRendererProps> = ({ chartData, chartType }) => {
-  const [isAnimating, setIsAnimating] = useState(false);
   const [currentChart, setCurrentChart] = useState(chartType);
   
   useEffect(() => {
     if (chartType !== currentChart) {
-      setIsAnimating(true);
-      const timer = setTimeout(() => {
-        setCurrentChart(chartType);
-        setIsAnimating(false);
-      }, 300);
-      return () => clearTimeout(timer);
+      setCurrentChart(chartType);
     }
   }, [chartType, currentChart]);
 
@@ -86,7 +80,7 @@ const ChartRenderer: React.FC<ChartRendererProps> = ({ chartData, chartType }) =
   };
 
   return (
-    <div className={`transition-opacity duration-300 ${isAnimating ? 'opacity-0' : 'opacity-100'}`}>
+    <div>
       {renderChart()}
     </div>
   );

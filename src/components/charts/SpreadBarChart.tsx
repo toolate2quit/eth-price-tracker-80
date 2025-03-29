@@ -15,7 +15,7 @@ const SpreadBarChart: React.FC<SpreadBarChartProps> = ({
   formatYAxisTick 
 }) => {
   return (
-    <ResponsiveContainer width="100%" height="100%" className="animate-fade-in">
+    <ResponsiveContainer width="100%" height="100%">
       <BarChart data={chartData} margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="time" />
@@ -42,9 +42,6 @@ const SpreadBarChart: React.FC<SpreadBarChartProps> = ({
           dataKey="spread" 
           name="Price Spread" 
           fill="#10B981" 
-          animationDuration={1500}
-          animationEasing="ease-in-out"
-          className="hover:opacity-80 transition-opacity"
         />
       </BarChart>
     </ResponsiveContainer>
