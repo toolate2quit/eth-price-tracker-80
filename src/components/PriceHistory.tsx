@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { formatDateTime, formatPrice } from '@/utils/priceUtils';
-import { ArrowDown, ArrowUp, CalendarDays, ChartLine, Clock } from 'lucide-react';
+import { CalendarDays, ChartLine, Clock } from 'lucide-react';
 import {
   Bar,
   BarChart,
@@ -27,27 +27,6 @@ interface PriceHistoryProps {
 const PriceHistory: React.FC<PriceHistoryProps> = ({ records }) => {
   const [timeRange, setTimeRange] = useState<string>('day');
   const [chartType, setChartType] = useState<string>('sideBySide');
-
-  // Calculate max differences in each direction
-  const { maxBinanceHigher, maxCoinbaseHigher } = useMemo(() => {
-    if (!records.length) return { maxBinanceHigher: 0, maxCoinbaseHigher: 0 };
-    
-    let maxBinanceHigher = 0;
-    let maxCoinbaseHigher = 0;
-    
-    records.forEach(record => {
-      // Positive difference means Binance price is higher
-      if (record.difference > 0 && record.difference > maxBinanceHigher) {
-        maxBinanceHigher = record.difference;
-      } 
-      // Negative difference means Coinbase price is higher
-      else if (record.difference < 0 && Math.abs(record.difference) > maxCoinbaseHigher) {
-        maxCoinbaseHigher = Math.abs(record.difference);
-      }
-    });
-    
-    return { maxBinanceHigher, maxCoinbaseHigher };
-  }, [records]);
 
   // Group data into 5-minute intervals
   const getFormattedData = () => {
@@ -182,24 +161,6 @@ const PriceHistory: React.FC<PriceHistoryProps> = ({ records }) => {
                 </TabsTrigger>
               </TabsList>
             </Tabs>
-          </div>
-        </div>
-        
-        {/* Max difference indicators */}
-        <div className="flex justify-between items-center px-4 py-2 bg-muted/30 rounded-lg">
-          <div className="flex items-center gap-2">
-            <ArrowUp className="h-4 w-4 text-green-500" />
-            <div>
-              <span className="text-sm text-muted-foreground">Max Binance Higher:</span>
-              <span className="ml-2 font-medium">+${maxBinanceHigher.toFixed(2)}</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <ArrowDown className="h-4 w-4 text-red-500" />
-            <div>
-              <span className="text-sm text-muted-foreground">Max Coinbase Higher:</span>
-              <span className="ml-2 font-medium">+${maxCoinbaseHigher.toFixed(2)}</span>
-            </div>
           </div>
         </div>
         
