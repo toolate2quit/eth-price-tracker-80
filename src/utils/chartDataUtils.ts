@@ -43,6 +43,7 @@ export const getFormattedData = (records: PriceDifferenceRecord[], timeRange: st
     const timeKey = roundedTimestamp.getTime();
     
     if (!groupedData.has(timeKey)) {
+      // For the first record in this time interval, create a new entry
       const diff = record.binancePrice - record.coinbasePrice;
       groupedData.set(timeKey, {
         timestamp: roundedTimestamp,
@@ -57,18 +58,20 @@ export const getFormattedData = (records: PriceDifferenceRecord[], timeRange: st
         count: 1
       });
     } else {
+      // For subsequent records in the same time interval, update the entry
       const existing = groupedData.get(timeKey);
-      // Update the weighted average prices
+      
+      // Calculate incremental averages to avoid accumulation errors
       existing.binancePrice = (existing.binancePrice * existing.count + record.binancePrice) / (existing.count + 1);
       existing.coinbasePrice = (existing.coinbasePrice * existing.count + record.coinbasePrice) / (existing.count + 1);
       
-      // Recalculate the difference and spread based on the current average prices
+      // Recalculate the difference metrics based on current average prices
       const diff = existing.binancePrice - existing.coinbasePrice;
       existing.difference = diff;
       existing.absoluteDifference = Math.abs(diff);
       existing.spread = Math.abs(diff);
       
-      // Ensure both binanceHigher and coinbaseHigher are properly calculated
+      // Update the exchange-specific difference values (crucial for showing both bars)
       existing.binanceHigher = diff > 0 ? Math.abs(diff) : 0;
       existing.coinbaseHigher = diff < 0 ? Math.abs(diff) : 0;
       
@@ -81,13 +84,22 @@ export const getFormattedData = (records: PriceDifferenceRecord[], timeRange: st
   
   // Make sure all data points have the necessary properties
   result.forEach(item => {
+    // Ensure these properties exist for every data point
     if (item.binanceHigher === undefined) item.binanceHigher = 0;
     if (item.coinbaseHigher === undefined) item.coinbaseHigher = 0;
+    
+    // Round values to avoid floating point weirdness
+    item.binancePrice = parseFloat(item.binancePrice.toFixed(2));
+    item.coinbasePrice = parseFloat(item.coinbasePrice.toFixed(2));
+    item.binanceHigher = parseFloat(item.binanceHigher.toFixed(2));
+    item.coinbaseHigher = parseFloat(item.coinbaseHigher.toFixed(2));
+    item.spread = parseFloat(item.spread.toFixed(2));
   });
   
   // Add dummy data if we have no actual data to visualize
   if (result.length === 0) {
     const now = new Date();
+    // Create example data with both values populated
     result.push({
       timestamp: now,
       time: formatTime(now),
@@ -98,6 +110,21 @@ export const getFormattedData = (records: PriceDifferenceRecord[], timeRange: st
       spread: 10,
       binanceHigher: 0,
       coinbaseHigher: 10,
+      count: 1
+    });
+    
+    // Add a second data point to ensure we see multiple bars
+    const fiveMinLater = new Date(now.getTime() + 5 * 60 * 1000);
+    result.push({
+      timestamp: fiveMinLater,
+      time: formatTime(fiveMinLater),
+      binancePrice: 2020,
+      coinbasePrice: 2005,
+      difference: 15,
+      absoluteDifference: 15,
+      spread: 15,
+      binanceHigher: 15,
+      coinbaseHigher: 0,
       count: 1
     });
   }

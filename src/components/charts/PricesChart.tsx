@@ -18,7 +18,11 @@ const PricesChart: React.FC<PricesChartProps> = ({
 }) => {
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={chartData} margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
+      <BarChart 
+        data={chartData} 
+        margin={{ top: 10, right: 30, left: 20, bottom: 0 }}
+        barGap={0}  // No gap between bars in same category
+      >
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="time" />
         <YAxis 
