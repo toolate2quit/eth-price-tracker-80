@@ -1,6 +1,7 @@
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import PriceChartTooltip from './PriceChartTooltip';
+import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
 interface ExchangeSpreadChartProps {
   chartData: any[];
@@ -14,7 +15,7 @@ const ExchangeSpreadChart: React.FC<ExchangeSpreadChartProps> = ({
   formatYAxisTick 
 }) => {
   return (
-    <ResponsiveContainer width="100%" height="100%">
+    <ResponsiveContainer width="100%" height="100%" className="animate-fade-in">
       <BarChart data={chartData} margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="time" />
@@ -24,18 +25,40 @@ const ExchangeSpreadChart: React.FC<ExchangeSpreadChartProps> = ({
           label={{ value: 'Price Spread (USD)', angle: -90, position: 'insideLeft', offset: 0, style: { textAnchor: 'middle' } }}
         />
         <Tooltip content={PriceChartTooltip} />
-        <Legend />
+        <Legend 
+          wrapperStyle={{ paddingTop: '10px' }}
+          formatter={(value) => (
+            <UITooltip>
+              <TooltipTrigger asChild>
+                <span className="text-sm font-medium cursor-help hover:text-primary transition-colors">{value}</span>
+              </TooltipTrigger>
+              <TooltipContent>
+                {value === "Binance Higher" ? (
+                  <p>When Binance price exceeds Coinbase</p>
+                ) : (
+                  <p>When Coinbase price exceeds Binance</p>
+                )}
+              </TooltipContent>
+            </UITooltip>
+          )}
+        />
         <Bar 
           dataKey="binanceHigher" 
           name="Binance Higher" 
           fill="#F0B90B" 
           stackId="a"
+          animationDuration={1500}
+          animationEasing="ease-in-out"
+          className="hover:opacity-80 transition-opacity"
         />
         <Bar 
           dataKey="coinbaseHigher" 
           name="Coinbase Higher" 
           fill="#0052FF" 
           stackId="b"
+          animationDuration={1500}
+          animationEasing="ease-in-out"
+          className="hover:opacity-80 transition-opacity"
         />
       </BarChart>
     </ResponsiveContainer>

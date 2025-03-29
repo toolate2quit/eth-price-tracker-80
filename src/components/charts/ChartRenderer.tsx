@@ -4,6 +4,7 @@ import ExchangeSpreadChart from './ExchangeSpreadChart';
 import SideBySideChart from './SideBySideChart';
 import PricesChart from './PricesChart';
 import { getMaxPrice, getMinPrice, getMaxSpread, formatYAxisTick } from '@/utils/chartDataUtils';
+import { useState, useEffect } from 'react';
 
 interface ChartRendererProps {
   chartData: any[];
@@ -11,6 +12,20 @@ interface ChartRendererProps {
 }
 
 const ChartRenderer: React.FC<ChartRendererProps> = ({ chartData, chartType }) => {
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [currentChart, setCurrentChart] = useState(chartType);
+  
+  useEffect(() => {
+    if (chartType !== currentChart) {
+      setIsAnimating(true);
+      const timer = setTimeout(() => {
+        setCurrentChart(chartType);
+        setIsAnimating(false);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [chartType, currentChart]);
+
   if (chartData.length === 0) {
     return (
       <div className="h-full w-full flex items-center justify-center">
@@ -19,54 +34,62 @@ const ChartRenderer: React.FC<ChartRendererProps> = ({ chartData, chartType }) =
     );
   }
 
-  const getMinPriceValue = () => getMinPrice(chartData, chartType);
+  const getMinPriceValue = () => getMinPrice(chartData, currentChart);
   const getMaxPriceValue = () => getMaxPrice(chartData);
   const getMaxSpreadValue = () => getMaxSpread(chartData);
 
-  switch (chartType) {
-    case 'exchangeSpread':
-      return (
-        <ExchangeSpreadChart 
-          chartData={chartData} 
-          getMaxSpread={getMaxSpreadValue} 
-          formatYAxisTick={formatYAxisTick}
-        />
-      );
-    case 'spread':
-      return (
-        <SpreadBarChart 
-          chartData={chartData} 
-          getMaxSpread={getMaxSpreadValue} 
-          formatYAxisTick={formatYAxisTick}
-        />
-      );
-    case 'sideBySide':
-      return (
-        <SideBySideChart 
-          chartData={chartData} 
-          getMinPrice={getMinPriceValue} 
-          getMaxPrice={getMaxPriceValue} 
-          formatYAxisTick={formatYAxisTick}
-        />
-      );
-    case 'prices':
-      return (
-        <PricesChart 
-          chartData={chartData} 
-          getMinPrice={getMinPriceValue} 
-          getMaxPrice={getMaxPriceValue} 
-          formatYAxisTick={formatYAxisTick}
-        />
-      );
-    default:
-      return (
-        <SpreadBarChart 
-          chartData={chartData} 
-          getMaxSpread={getMaxSpreadValue} 
-          formatYAxisTick={formatYAxisTick}
-        />
-      );
-  }
+  const renderChart = () => {
+    switch (currentChart) {
+      case 'exchangeSpread':
+        return (
+          <ExchangeSpreadChart 
+            chartData={chartData} 
+            getMaxSpread={getMaxSpreadValue} 
+            formatYAxisTick={formatYAxisTick}
+          />
+        );
+      case 'spread':
+        return (
+          <SpreadBarChart 
+            chartData={chartData} 
+            getMaxSpread={getMaxSpreadValue} 
+            formatYAxisTick={formatYAxisTick}
+          />
+        );
+      case 'sideBySide':
+        return (
+          <SideBySideChart 
+            chartData={chartData} 
+            getMinPrice={getMinPriceValue} 
+            getMaxPrice={getMaxPriceValue} 
+            formatYAxisTick={formatYAxisTick}
+          />
+        );
+      case 'prices':
+        return (
+          <PricesChart 
+            chartData={chartData} 
+            getMinPrice={getMinPriceValue} 
+            getMaxPrice={getMaxPriceValue} 
+            formatYAxisTick={formatYAxisTick}
+          />
+        );
+      default:
+        return (
+          <SpreadBarChart 
+            chartData={chartData} 
+            getMaxSpread={getMaxSpreadValue} 
+            formatYAxisTick={formatYAxisTick}
+          />
+        );
+    }
+  };
+
+  return (
+    <div className={`transition-opacity duration-300 ${isAnimating ? 'opacity-0' : 'opacity-100'}`}>
+      {renderChart()}
+    </div>
+  );
 };
 
 export default ChartRenderer;
