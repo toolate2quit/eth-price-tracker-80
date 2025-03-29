@@ -14,12 +14,13 @@ const ExchangeSpreadChart: React.FC<ExchangeSpreadChartProps> = ({
   getMaxSpread, 
   formatYAxisTick 
 }) => {
+  console.log('ExchangeSpreadChart data:', chartData);
+  
   return (
     <ResponsiveContainer width="100%" height="100%">
       <BarChart 
         data={chartData} 
         margin={{ top: 10, right: 30, left: 20, bottom: 0 }}
-        barGap={0}  // No gap between bars in same category
       >
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="time" />
@@ -50,13 +51,13 @@ const ExchangeSpreadChart: React.FC<ExchangeSpreadChartProps> = ({
           dataKey="binanceHigher" 
           name="Binance Higher" 
           fill="#F0B90B" 
-          barSize={10}
+          barSize={30}
         />
         <Bar 
           dataKey="coinbaseHigher" 
           name="Coinbase Higher" 
           fill="#0052FF" 
-          barSize={10}
+          barSize={30}
         />
       </BarChart>
     </ResponsiveContainer>

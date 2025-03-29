@@ -20,6 +20,10 @@ const ChartRenderer: React.FC<ChartRendererProps> = ({ chartData, chartType }) =
     }
   }, [chartType, currentChart]);
 
+  // Debug the incoming data
+  console.log('ChartRenderer received data:', chartData);
+  console.log('Chart type:', currentChart);
+
   if (!chartData || chartData.length === 0) {
     return (
       <div className="h-full w-full flex items-center justify-center">

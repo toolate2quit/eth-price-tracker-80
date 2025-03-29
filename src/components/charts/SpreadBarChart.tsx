@@ -45,6 +45,7 @@ const SpreadBarChart: React.FC<SpreadBarChartProps> = ({
           dataKey="spread" 
           name="Price Spread" 
           fill="#10B981" 
+          barSize={40}
         />
       </BarChart>
     </ResponsiveContainer>

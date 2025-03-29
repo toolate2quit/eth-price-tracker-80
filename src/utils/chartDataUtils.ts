@@ -79,8 +79,11 @@ export const getFormattedData = (records: PriceDifferenceRecord[], timeRange: st
     }
   });
 
-  // Convert Map to array and ensure every item has both binanceHigher and coinbaseHigher defined
+  // Convert Map to array
   const result = Array.from(groupedData.values());
+  
+  // Debug the data
+  console.log('Processed chart data:', result);
   
   // Make sure all data points have the necessary properties
   result.forEach(item => {
@@ -98,55 +101,60 @@ export const getFormattedData = (records: PriceDifferenceRecord[], timeRange: st
   
   // Add dummy data if we have no actual data to visualize
   if (result.length === 0) {
-    const now = new Date();
-    
-    // Create several example data points to ensure we see multiple bars
-    // First data point
-    result.push({
-      timestamp: now,
-      time: formatTime(now),
-      binancePrice: 2000,
-      coinbasePrice: 2010,
-      difference: -10,
-      absoluteDifference: 10,
-      spread: 10,
-      binanceHigher: 0,
-      coinbaseHigher: 10,
-      count: 1
-    });
-    
-    // Second data point - 5 min later
-    const fiveMinLater = new Date(now.getTime() + 5 * 60 * 1000);
-    result.push({
-      timestamp: fiveMinLater,
-      time: formatTime(fiveMinLater),
-      binancePrice: 2020,
-      coinbasePrice: 2005,
-      difference: 15,
-      absoluteDifference: 15,
-      spread: 15,
-      binanceHigher: 15,
-      coinbaseHigher: 0,
-      count: 1
-    });
-    
-    // Third data point - 10 min later
-    const tenMinLater = new Date(now.getTime() + 10 * 60 * 1000);
-    result.push({
-      timestamp: tenMinLater,
-      time: formatTime(tenMinLater),
-      binancePrice: 2025,
-      coinbasePrice: 2015,
-      difference: 10,
-      absoluteDifference: 10,
-      spread: 10,
-      binanceHigher: 10,
-      coinbaseHigher: 0,
-      count: 1
-    });
+    // Create test data with multiple time points
+    createDummyData(result);
   }
   
   return result;
+};
+
+// Function to create dummy/test data
+const createDummyData = (result: any[]) => {
+  const now = new Date();
+  
+  // First data point
+  result.push({
+    timestamp: now,
+    time: formatTime(now),
+    binancePrice: 2000,
+    coinbasePrice: 2010,
+    difference: -10,
+    absoluteDifference: 10,
+    spread: 10,
+    binanceHigher: 0,
+    coinbaseHigher: 10,
+    count: 1
+  });
+  
+  // Second data point - 5 min later
+  const fiveMinLater = new Date(now.getTime() + 5 * 60 * 1000);
+  result.push({
+    timestamp: fiveMinLater,
+    time: formatTime(fiveMinLater),
+    binancePrice: 2020,
+    coinbasePrice: 2005,
+    difference: 15,
+    absoluteDifference: 15,
+    spread: 15,
+    binanceHigher: 15,
+    coinbaseHigher: 0,
+    count: 1
+  });
+  
+  // Third data point - 10 min later
+  const tenMinLater = new Date(now.getTime() + 10 * 60 * 1000);
+  result.push({
+    timestamp: tenMinLater,
+    time: formatTime(tenMinLater),
+    binancePrice: 2025,
+    coinbasePrice: 2015,
+    difference: 10,
+    absoluteDifference: 10,
+    spread: 10,
+    binanceHigher: 10,
+    coinbaseHigher: 0,
+    count: 1
+  });
 };
 
 // Get maximum price for the Y-axis
@@ -188,4 +196,3 @@ export const getMaxSpread = (chartData: any[]) => {
 export const formatYAxisTick = (value: number) => {
   return `$${value.toFixed(0)}`;
 };
-
