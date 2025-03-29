@@ -16,11 +16,14 @@ const PricesChart: React.FC<PricesChartProps> = ({
   getMaxPrice, 
   formatYAxisTick 
 }) => {
+  console.log('Rendering PricesChart with data:', chartData);
+  
   return (
     <ResponsiveContainer width="100%" height="100%">
       <BarChart 
         data={chartData} 
         margin={{ top: 10, right: 30, left: 20, bottom: 0 }}
+        barGap={2}
       >
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="time" />
@@ -47,13 +50,13 @@ const PricesChart: React.FC<PricesChartProps> = ({
           dataKey="binancePrice" 
           name="Binance" 
           fill="#F0B90B" 
-          barSize={30}
+          barSize={15}
         />
         <Bar 
           dataKey="coinbasePrice" 
           name="Coinbase" 
           fill="#0052FF" 
-          barSize={30}
+          barSize={15}
         />
       </BarChart>
     </ResponsiveContainer>
