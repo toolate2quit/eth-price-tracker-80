@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { PriceData, PriceDifferenceRecord } from '@/types';
 import { 
@@ -5,7 +6,9 @@ import {
   initializeWebSockets, 
   closeWebSockets,
   getConnectionStatus,
-  resetConnections
+  resetConnections,
+  toggleSimulatedData,
+  isUsingSimulatedData
 } from '@/services/priceService';
 import { 
   calculatePriceDifference, 
@@ -21,7 +24,15 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
-import { ArrowDown, ArrowUp, Loader2, RefreshCw, Wifi, WifiOff } from 'lucide-react';
+import { 
+  ArrowDown, 
+  ArrowUp, 
+  Loader2, 
+  RefreshCw, 
+  Wifi, 
+  WifiOff,
+  ActivitySquare
+} from 'lucide-react';
 
 // Constants
 const DATA_COLLECTION_INTERVAL = 5 * 60 * 1000; // 5 minutes in milliseconds
@@ -33,6 +44,7 @@ const PriceTracker = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [websocketsEnabled, setWebsocketsEnabled] = useState(true);
+  const [simulatedDataMode, setSimulatedDataMode] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState({
     binance: false,
     coinbase: false
@@ -73,6 +85,12 @@ const PriceTracker = () => {
         coinbase: false
       });
     }
+  };
+  
+  // Handle simulated data toggle
+  const handleSimulatedDataToggle = (enabled: boolean) => {
+    setSimulatedDataMode(enabled);
+    toggleSimulatedData(enabled);
   };
   
   // Handle WebSocket reset
@@ -185,6 +203,12 @@ const PriceTracker = () => {
     if (websocketsEnabled) {
       const status = initializeWebSockets();
       setConnectionStatus(status);
+      
+      // Check if we should start in simulated mode
+      const usingSimulated = isUsingSimulatedData();
+      if (usingSimulated !== simulatedDataMode) {
+        setSimulatedDataMode(usingSimulated);
+      }
     }
     
     // Fetch prices immediately
@@ -198,7 +222,7 @@ const PriceTracker = () => {
       clearInterval(intervalId);
       closeWebSockets();
     };
-  }, [fetchPrices, websocketsEnabled]);
+  }, [fetchPrices, websocketsEnabled, simulatedDataMode]);
 
   // Load saved price records from localStorage on initial load
   useEffect(() => {
@@ -282,24 +306,41 @@ const PriceTracker = () => {
           <p className="text-sm text-muted-foreground">Tracking price differences between exchanges over time</p>
         </div>
         
-        <div className="flex items-center space-x-4">
+        <div className="flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-4">
+          {/* Data mode toggle - simulated vs real */}
+          <div className="flex items-center space-x-2">
+            <Switch
+              checked={simulatedDataMode}
+              onCheckedChange={handleSimulatedDataToggle}
+              id="simulated-mode"
+            />
+            <label
+              htmlFor="simulated-mode"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-1"
+            >
+              <ActivitySquare className="h-3 w-3" />
+              {simulatedDataMode ? 'Using Simulated Data' : 'Using Real Data'}
+            </label>
+          </div>
+          
           {/* WebSocket Toggle */}
           <div className="flex items-center space-x-2">
             <Switch
               checked={websocketsEnabled}
               onCheckedChange={handleWebSocketToggle}
               id="websocket-mode"
+              disabled={simulatedDataMode}
             />
             <label
               htmlFor="websocket-mode"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              className={`text-sm font-medium leading-none ${simulatedDataMode ? 'opacity-50' : ''}`}
             >
-              {websocketsEnabled ? 'WebSockets Enabled' : 'Using Simulated Data'}
+              {websocketsEnabled ? 'WebSockets Enabled' : 'WebSockets Disabled'}
             </label>
           </div>
           
           {/* Reset connection button */}
-          {websocketsEnabled && (
+          {websocketsEnabled && !simulatedDataMode && (
             <Button 
               variant="outline" 
               size="sm" 
@@ -317,7 +358,7 @@ const PriceTracker = () => {
           )}
           
           {/* Connection Status Badges */}
-          {websocketsEnabled && (
+          {websocketsEnabled && !simulatedDataMode && (
             <div className="flex space-x-2">
               <Badge variant={connectionStatus.binance ? "outline" : "secondary"} className="flex items-center gap-1">
                 {connectionStatus.binance ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}

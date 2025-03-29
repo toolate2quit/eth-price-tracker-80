@@ -22,6 +22,9 @@ const MAX_RECONNECT_ATTEMPTS = 5;
 const RECONNECT_DELAY_MS = 3000; // 3 seconds initial delay
 const MAX_RECONNECT_DELAY_MS = 30000; // 30 seconds max delay
 
+// New: Set this to true to force using simulated data (for testing/debugging)
+let forceSimulatedData = false;
+
 // Helper for exponential backoff
 const getReconnectDelay = (attempts: number): number => {
   const delay = Math.min(
@@ -31,19 +34,32 @@ const getReconnectDelay = (attempts: number): number => {
   return delay;
 };
 
-// Initialize Binance WebSocket with better error handling
+// Initialize Binance WebSocket with improved error handling
 const initBinanceWebSocket = (): void => {
   try {
     if (binanceSocket) {
       binanceSocket.close();
     }
     
-    binanceSocket = new WebSocket('wss://stream.binance.com:9443/ws/ethusdt@ticker');
+    // If simulated data is forced, don't attempt connection
+    if (forceSimulatedData) {
+      console.log('Simulated data mode is enabled. Not connecting to Binance WebSocket.');
+      connectionStatus.binance = false;
+      return;
+    }
+    
+    // Use WebSocket without SSL for better compatibility
+    binanceSocket = new WebSocket('ws://stream.binance.com:9443/ws/ethusdt@ticker');
     
     binanceSocket.onopen = () => {
       console.log('Binance WebSocket connected');
       connectionStatus.binance = true;
       binanceReconnectAttempts = 0; // Reset reconnect attempts on successful connection
+      
+      toast({
+        title: "Binance Connected",
+        description: "Successfully connected to Binance WebSocket stream.",
+      });
       
       // Heartbeat to keep connection alive (every 30 seconds)
       const heartbeat = setInterval(() => {
@@ -71,6 +87,13 @@ const initBinanceWebSocket = (): void => {
     binanceSocket.onerror = (error) => {
       console.error('Binance WebSocket error:', error);
       connectionStatus.binance = false;
+      
+      // Try an alternative connection if this is the first error
+      if (binanceReconnectAttempts === 0) {
+        console.log('Trying alternative Binance connection...');
+        binanceSocket?.close(); // Close the existing connection
+        binanceSocket = new WebSocket('wss://data-stream.binance.com/ws/ethusdt@ticker');
+      }
     };
     
     binanceSocket.onclose = () => {
@@ -104,19 +127,32 @@ const initBinanceWebSocket = (): void => {
   }
 };
 
-// Initialize Coinbase WebSocket with better error handling
+// Initialize Coinbase WebSocket with improved error handling
 const initCoinbaseWebSocket = (): void => {
   try {
     if (coinbaseSocket) {
       coinbaseSocket.close();
     }
     
-    coinbaseSocket = new WebSocket('wss://ws-feed.pro.coinbase.com'); // Updated to use the correct endpoint
+    // If simulated data is forced, don't attempt connection
+    if (forceSimulatedData) {
+      console.log('Simulated data mode is enabled. Not connecting to Coinbase WebSocket.');
+      connectionStatus.coinbase = false;
+      return;
+    }
+    
+    // Updated Coinbase WebSocket URL - using the updated endpoint that doesn't require SSL
+    coinbaseSocket = new WebSocket('ws://ws-feed.exchange.coinbase.com');
     
     coinbaseSocket.onopen = () => {
       console.log('Coinbase WebSocket connected');
       connectionStatus.coinbase = true;
       coinbaseReconnectAttempts = 0; // Reset reconnect attempts on successful connection
+      
+      toast({
+        title: "Coinbase Connected",
+        description: "Successfully connected to Coinbase WebSocket stream.",
+      });
       
       // Subscribe to ETH-USD ticker
       const subscribeMsg = {
@@ -156,6 +192,13 @@ const initCoinbaseWebSocket = (): void => {
     coinbaseSocket.onerror = (error) => {
       console.error('Coinbase WebSocket error:', error);
       connectionStatus.coinbase = false;
+      
+      // Try an alternative connection if this is the first error
+      if (coinbaseReconnectAttempts === 0) {
+        console.log('Trying alternative Coinbase connection...');
+        coinbaseSocket?.close(); // Close the existing connection
+        coinbaseSocket = new WebSocket('wss://advanced-trade-ws.coinbase.com');
+      }
     };
     
     coinbaseSocket.onclose = () => {
@@ -224,8 +267,9 @@ export const closeWebSockets = (): void => {
 
 // Get latest price from the WebSocket connections
 export const fetchPrice = async (exchange: string): Promise<PriceData> => {
-  // If WebSocket is not connected or no price is available yet, fall back to simulated data
-  if ((exchange === 'binance' && (!connectionStatus.binance || latestBinancePrice === null)) ||
+  // If forced simulated data or WebSocket is not connected or no price is available yet, use simulated data
+  if (forceSimulatedData || 
+      (exchange === 'binance' && (!connectionStatus.binance || latestBinancePrice === null)) ||
       (exchange === 'coinbase' && (!connectionStatus.coinbase || latestCoinbasePrice === null))) {
     return fallbackFetchPrice(exchange);
   }
@@ -282,6 +326,32 @@ export const resetConnections = (): void => {
     title: "WebSocket Connections Reset",
     description: "Attempting to establish new connections to exchanges...",
   });
+};
+
+// New function to toggle between real and simulated data
+export const toggleSimulatedData = (useSimulated: boolean): void => {
+  forceSimulatedData = useSimulated;
+  
+  if (useSimulated) {
+    // Close any existing connections
+    closeWebSockets();
+    toast({
+      title: "Simulated Data Mode",
+      description: "Now using simulated data for price information.",
+    });
+  } else {
+    // Try to reconnect
+    resetConnections();
+    toast({
+      title: "Real Data Mode",
+      description: "Attempting to connect to exchange WebSockets for real-time data.",
+    });
+  }
+};
+
+// Check if simulated data is being used
+export const isUsingSimulatedData = (): boolean => {
+  return forceSimulatedData || (!connectionStatus.binance && !connectionStatus.coinbase);
 };
 
 // Simulate order execution
