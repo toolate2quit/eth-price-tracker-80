@@ -1,11 +1,11 @@
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { PriceData, PriceDifferenceRecord } from '@/types';
 import { 
   fetchPrice, 
   initializeWebSockets, 
   closeWebSockets,
-  getConnectionStatus
+  getConnectionStatus,
+  resetConnections
 } from '@/services/priceService';
 import { 
   calculatePriceDifference, 
@@ -18,9 +18,10 @@ import PriceHistory from './PriceHistory';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { Switch } from '@/components/ui/switch';
-import { ArrowDown, ArrowUp, Loader2, Wifi, WifiOff } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { ArrowDown, ArrowUp, Loader2, RefreshCw, Wifi, WifiOff } from 'lucide-react';
 
 // Constants
 const DATA_COLLECTION_INTERVAL = 5 * 60 * 1000; // 5 minutes in milliseconds
@@ -36,6 +37,7 @@ const PriceTracker = () => {
     binance: false,
     coinbase: false
   });
+  const [isResetting, setIsResetting] = useState(false);
   
   // Price data
   const [binancePrice, setBinancePrice] = useState<PriceData | null>(null);
@@ -71,6 +73,22 @@ const PriceTracker = () => {
         coinbase: false
       });
     }
+  };
+  
+  // Handle WebSocket reset
+  const handleResetConnections = () => {
+    setIsResetting(true);
+    
+    setTimeout(() => {
+      resetConnections();
+      
+      // Update status after a short delay to allow connections to initialize
+      setTimeout(() => {
+        const status = getConnectionStatus();
+        setConnectionStatus(status);
+        setIsResetting(false);
+      }, 1000);
+    }, 0);
   };
   
   // Check if it's time to record a new data point (every 5 minutes)
@@ -279,6 +297,24 @@ const PriceTracker = () => {
               {websocketsEnabled ? 'WebSockets Enabled' : 'Using Simulated Data'}
             </label>
           </div>
+          
+          {/* Reset connection button */}
+          {websocketsEnabled && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleResetConnections}
+              disabled={isResetting}
+              className="flex items-center gap-1"
+            >
+              {isResetting ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3 w-3" />
+              )}
+              Reset Connections
+            </Button>
+          )}
           
           {/* Connection Status Badges */}
           {websocketsEnabled && (
