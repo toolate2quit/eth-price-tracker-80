@@ -26,7 +26,7 @@ interface PriceHistoryProps {
 
 const PriceHistory: React.FC<PriceHistoryProps> = ({ records }) => {
   const [timeRange, setTimeRange] = useState<string>('day');
-  const [chartType, setChartType] = useState<string>('difference');
+  const [chartType, setChartType] = useState<string>('sideBySide');
 
   // Calculate max differences in each direction
   const { maxBinanceHigher, maxCoinbaseHigher } = useMemo(() => {
@@ -92,9 +92,6 @@ const PriceHistory: React.FC<PriceHistoryProps> = ({ records }) => {
           coinbasePrice: record.coinbasePrice,
           difference: record.difference,
           absoluteDifference: Math.abs(record.difference),
-          // Split the difference into two separate values for the chart
-          binanceHigher: record.difference > 0 ? record.difference : 0,
-          coinbaseHigher: record.difference < 0 ? Math.abs(record.difference) : 0,
           count: 1
         });
       } else {
@@ -106,16 +103,6 @@ const PriceHistory: React.FC<PriceHistoryProps> = ({ records }) => {
         // Recalculate the difference based on the current average prices
         existing.difference = existing.binancePrice - existing.coinbasePrice;
         existing.absoluteDifference = Math.abs(existing.difference);
-        
-        // Update the directional differences based on the recalculated difference
-        if (existing.difference > 0) {
-          existing.binanceHigher = existing.difference;
-          existing.coinbaseHigher = 0;
-        } else {
-          existing.binanceHigher = 0;
-          existing.coinbaseHigher = Math.abs(existing.difference);
-        }
-        
         existing.count += 1;
       }
     });
@@ -130,37 +117,35 @@ const PriceHistory: React.FC<PriceHistoryProps> = ({ records }) => {
 
   const chartData = getFormattedData();
 
-  // Get maximum difference for the Y-axis
+  // Get maximum price for the Y-axis
+  const getMaxPrice = () => {
+    if (!chartData.length) return 2100;
+    
+    const maxBinance = Math.max(...chartData.map(d => d.binancePrice));
+    const maxCoinbase = Math.max(...chartData.map(d => d.coinbasePrice));
+    const max = Math.max(maxBinance, maxCoinbase);
+    
+    return Math.ceil(max * 1.02); // Add 2% padding
+  };
+
+  // Get minimum price for the Y-axis
+  const getMinPrice = () => {
+    if (!chartData.length) return 1900;
+    
+    const minBinance = Math.min(...chartData.map(d => d.binancePrice));
+    const minCoinbase = Math.min(...chartData.map(d => d.coinbasePrice));
+    const min = Math.min(minBinance, minCoinbase);
+    
+    // Subtract 2% padding or set to 0 if showing absolute difference
+    return chartType === 'sideBySide' ? Math.floor(min * 0.98) : 0;
+  };
+
+  // Get max difference for the Y-axis
   const getMaxDifference = () => {
     if (!chartData.length) return 100;
     
-    if (chartType === 'difference') {
-      const maxPositive = Math.max(...chartData.map(d => d.binanceHigher || 0));
-      const maxNegative = Math.max(...chartData.map(d => d.coinbaseHigher || 0));
-      return Math.ceil(Math.max(maxPositive, maxNegative) * 1.2); // Add 20% padding
-    } else {
-      const max = Math.max(...chartData.map(d => d.absoluteDifference));
-      return Math.ceil(max * 1.2); // Add 20% padding
-    }
-  };
-
-  // Get price range for Y-axis when showing prices
-  const getPriceRange = () => {
-    if (!chartData.length) return { min: 1900, max: 2100 };
-    
-    const binancePrices = chartData.map(d => d.binancePrice);
-    const coinbasePrices = chartData.map(d => d.coinbasePrice);
-    const allPrices = [...binancePrices, ...coinbasePrices];
-    
-    const min = Math.min(...allPrices);
-    const max = Math.max(...allPrices);
-    
-    // Add 2% padding
-    const padding = (max - min) * 0.02;
-    return {
-      min: Math.floor(min - padding),
-      max: Math.ceil(max + padding)
-    };
+    const max = Math.max(...chartData.map(d => d.absoluteDifference));
+    return Math.ceil(max * 1.2); // Add 20% padding
   };
 
   return (
@@ -178,7 +163,7 @@ const PriceHistory: React.FC<PriceHistoryProps> = ({ records }) => {
                 <SelectValue placeholder="Chart Type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="difference">Directional Difference</SelectItem>
+                <SelectItem value="sideBySide">Side by Side Prices</SelectItem>
                 <SelectItem value="absoluteDifference">Absolute Difference</SelectItem>
                 <SelectItem value="prices">Exchange Prices</SelectItem>
               </SelectContent>
@@ -223,12 +208,45 @@ const PriceHistory: React.FC<PriceHistoryProps> = ({ records }) => {
             <div className="h-full w-full flex items-center justify-center">
               <p className="text-muted-foreground">No data available for selected time range</p>
             </div>
+          ) : chartType === 'sideBySide' ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart 
+                data={chartData} 
+                margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                barGap={0} // Set the gap between bars to 0
+                barCategoryGap={8} // Set the gap between categories (time intervals)
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="time" />
+                <YAxis domain={[getMinPrice(), getMaxPrice()]} />
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      const data = payload[0].payload;
+                      return (
+                        <div className="rounded-lg border bg-background p-2 shadow-md">
+                          <p className="font-medium">{formatDateTime(data.timestamp)}</p>
+                          <p>Binance: {formatPrice(data.binancePrice)}</p>
+                          <p>Coinbase: {formatPrice(data.coinbasePrice)}</p>
+                          <p>Diff: {data.difference >= 0 ? '+' : ''}{formatPrice(data.difference)}</p>
+                          <p>Samples: {data.count}</p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Legend />
+                <Bar dataKey="binancePrice" name="Binance" fill="#F0B90B" />
+                <Bar dataKey="coinbasePrice" name="Coinbase" fill="#0052FF" />
+              </BarChart>
+            </ResponsiveContainer>
           ) : chartType === 'prices' ? (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="time" />
-                <YAxis domain={[getPriceRange().min, getPriceRange().max]} />
+                <YAxis domain={[getMinPrice(), getMaxPrice()]} />
                 <Tooltip
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
@@ -248,45 +266,6 @@ const PriceHistory: React.FC<PriceHistoryProps> = ({ records }) => {
                 <Legend />
                 <Bar dataKey="binancePrice" name="Binance" fill="#F0B90B" />
                 <Bar dataKey="coinbasePrice" name="Coinbase" fill="#0052FF" />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : chartType === 'difference' ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="time" />
-                <YAxis 
-                  domain={[-(getMaxDifference()), getMaxDifference()]}
-                  tickFormatter={(value) => Math.abs(value).toString()}
-                />
-                <Tooltip
-                  content={({ active, payload }) => {
-                    if (active && payload && payload.length) {
-                      const data = payload[0].payload;
-                      return (
-                        <div className="rounded-lg border bg-background p-2 shadow-md">
-                          <p className="font-medium">{formatDateTime(data.timestamp)}</p>
-                          <p>Binance: {formatPrice(data.binancePrice)}</p>
-                          <p>Coinbase: {formatPrice(data.coinbasePrice)}</p>
-                          <p>Diff: {data.difference >= 0 ? '+' : ''}{formatPrice(data.difference)}</p>
-                          <p>Samples: {data.count}</p>
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                <ReferenceLine y={0} stroke="#666" />
-                <Bar dataKey="binanceHigher" name="Binance Higher" fill="#10B981">
-                  {chartData.map((entry, index) => (
-                    <Cell key={`cell-binance-${index}`} fill="#10B981" />
-                  ))}
-                </Bar>
-                <Bar dataKey="coinbaseHigher" name="Coinbase Higher" stackId="stack" isAnimationActive={false}>
-                  {chartData.map((entry, index) => (
-                    <Cell key={`cell-coinbase-${index}`} fill="#EF4444" />
-                  ))}
-                </Bar>
               </BarChart>
             </ResponsiveContainer>
           ) : (
