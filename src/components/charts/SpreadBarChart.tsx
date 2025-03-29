@@ -19,7 +19,7 @@ const SpreadBarChart: React.FC<SpreadBarChartProps> = ({
       <BarChart 
         data={chartData} 
         margin={{ top: 10, right: 30, left: 20, bottom: 0 }}
-        barGap={0}
+        barCategoryGap="35%"
       >
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="time" />
@@ -46,7 +46,6 @@ const SpreadBarChart: React.FC<SpreadBarChartProps> = ({
           dataKey="spread" 
           name="Price Spread" 
           fill="#10B981" 
-          barSize={20}
         />
       </BarChart>
     </ResponsiveContainer>

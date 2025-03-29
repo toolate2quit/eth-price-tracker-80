@@ -61,11 +61,12 @@ export const getFormattedData = (records: PriceDifferenceRecord[], timeRange: st
       // For subsequent records in the same time interval, update the entry
       const existing = groupedData.get(timeKey);
       
-      // Calculate incremental averages to avoid accumulation errors
-      existing.binancePrice = (existing.binancePrice * existing.count + record.binancePrice) / (existing.count + 1);
-      existing.coinbasePrice = (existing.coinbasePrice * existing.count + record.coinbasePrice) / (existing.count + 1);
+      // Instead of averaging, we'll simply replace the values
+      // This ensures the most recent value for each 5-minute interval is displayed
+      existing.binancePrice = record.binancePrice;
+      existing.coinbasePrice = record.coinbasePrice;
       
-      // Recalculate the difference metrics based on current average prices
+      // Recalculate the difference metrics based on current prices
       const diff = existing.binancePrice - existing.coinbasePrice;
       existing.difference = diff;
       existing.absoluteDifference = Math.abs(diff);
@@ -101,7 +102,6 @@ export const getFormattedData = (records: PriceDifferenceRecord[], timeRange: st
   
   // Add dummy data if we have no actual data to visualize
   if (result.length === 0) {
-    // Create test data with multiple time points
     createDummyData(result);
   }
   
