@@ -1,3 +1,4 @@
+
 import { useState, useMemo } from 'react';
 import { PriceDifferenceRecord } from '@/types';
 import { Card } from '@/components/ui/card';
@@ -5,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { formatDateTime, formatPrice } from '@/utils/priceUtils';
-import { CalendarDays, ChartLine, Clock } from 'lucide-react';
+import { CalendarDays, ChartLine, Clock, TrendingUp, TrendingDown } from 'lucide-react';
 import {
   Bar,
   BarChart,
@@ -67,14 +68,17 @@ const PriceHistory: React.FC<PriceHistoryProps> = ({ records }) => {
       const timeKey = roundedTimestamp.getTime();
       
       if (!groupedData.has(timeKey)) {
+        const diff = record.binancePrice - record.coinbasePrice;
         groupedData.set(timeKey, {
           timestamp: roundedTimestamp,
           time: formatTime(roundedTimestamp),
           binancePrice: record.binancePrice,
           coinbasePrice: record.coinbasePrice,
-          difference: record.difference,
-          absoluteDifference: Math.abs(record.difference),
-          spread: Math.abs(record.difference),
+          difference: diff,
+          absoluteDifference: Math.abs(diff),
+          spread: Math.abs(diff),
+          binanceHigher: diff > 0 ? Math.abs(diff) : 0,
+          coinbaseHigher: diff < 0 ? Math.abs(diff) : 0,
           count: 1
         });
       } else {
@@ -84,9 +88,12 @@ const PriceHistory: React.FC<PriceHistoryProps> = ({ records }) => {
         existing.coinbasePrice = (existing.coinbasePrice * existing.count + record.coinbasePrice) / (existing.count + 1);
         
         // Recalculate the difference and spread based on the current average prices
-        existing.difference = existing.binancePrice - existing.coinbasePrice;
-        existing.absoluteDifference = Math.abs(existing.difference);
-        existing.spread = Math.abs(existing.difference);
+        const diff = existing.binancePrice - existing.coinbasePrice;
+        existing.difference = diff;
+        existing.absoluteDifference = Math.abs(diff);
+        existing.spread = Math.abs(diff);
+        existing.binanceHigher = diff > 0 ? Math.abs(diff) : 0;
+        existing.coinbaseHigher = diff < 0 ? Math.abs(diff) : 0;
         existing.count += 1;
       }
     });
@@ -128,7 +135,10 @@ const PriceHistory: React.FC<PriceHistoryProps> = ({ records }) => {
   const getMaxSpread = () => {
     if (!chartData.length) return 100;
     
-    const max = Math.max(...chartData.map(d => d.spread));
+    const maxBinanceHigher = Math.max(...chartData.map(d => d.binanceHigher || 0));
+    const maxCoinbaseHigher = Math.max(...chartData.map(d => d.coinbaseHigher || 0));
+    const max = Math.max(maxBinanceHigher, maxCoinbaseHigher);
+    
     return Math.ceil(max * 1.2); // Add 20% padding
   };
 
@@ -153,6 +163,7 @@ const PriceHistory: React.FC<PriceHistoryProps> = ({ records }) => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="spread">Price Spread</SelectItem>
+                <SelectItem value="exchangeSpread">Exchange Spread</SelectItem>
                 <SelectItem value="sideBySide">Side by Side Prices</SelectItem>
                 <SelectItem value="prices">Exchange Prices</SelectItem>
               </SelectContent>
@@ -179,6 +190,48 @@ const PriceHistory: React.FC<PriceHistoryProps> = ({ records }) => {
             <div className="h-full w-full flex items-center justify-center">
               <p className="text-muted-foreground">No data available for selected time range</p>
             </div>
+          ) : chartType === 'exchangeSpread' ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="time" />
+                <YAxis 
+                  domain={[0, getMaxSpread()]} 
+                  tickFormatter={formatYAxisTick}
+                  label={{ value: 'Price Spread (USD)', angle: -90, position: 'insideLeft', offset: 0, style: { textAnchor: 'middle' } }}
+                />
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      const data = payload[0].payload;
+                      return (
+                        <div className="rounded-lg border bg-background p-2 shadow-md">
+                          <p className="font-medium">{formatDateTime(data.timestamp)}</p>
+                          <p>Binance: {formatPrice(data.binancePrice)}</p>
+                          <p>Coinbase: {formatPrice(data.coinbasePrice)}</p>
+                          <p>Difference: {data.difference >= 0 ? '+' : ''}{formatPrice(data.difference)}</p>
+                          <p>Samples: {data.count}</p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Legend />
+                <Bar 
+                  dataKey="binanceHigher" 
+                  name="Binance Higher" 
+                  fill="#F0B90B" 
+                  stackId="a"
+                />
+                <Bar 
+                  dataKey="coinbaseHigher" 
+                  name="Coinbase Higher" 
+                  fill="#0052FF" 
+                  stackId="b"
+                />
+              </BarChart>
+            </ResponsiveContainer>
           ) : chartType === 'spread' ? (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
