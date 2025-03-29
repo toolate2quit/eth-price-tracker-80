@@ -91,31 +91,29 @@ const PriceHistory: React.FC<PriceHistoryProps> = ({ records }) => {
           binancePrice: record.binancePrice,
           coinbasePrice: record.coinbasePrice,
           difference: record.difference,
-          absoluteDifference: record.absoluteDifference,
-          // Add separate properties for each exchange's difference from the other
+          absoluteDifference: Math.abs(record.difference),
+          // Split the difference into two separate values for the chart
           binanceHigher: record.difference > 0 ? record.difference : 0,
-          coinbaseHigher: record.difference < 0 ? Math.abs(record.difference) : 0, // Make this positive for display
+          coinbaseHigher: record.difference < 0 ? Math.abs(record.difference) : 0,
           count: 1
         });
       } else {
         const existing = groupedData.get(timeKey);
+        // Update the weighted average prices
         existing.binancePrice = (existing.binancePrice * existing.count + record.binancePrice) / (existing.count + 1);
         existing.coinbasePrice = (existing.coinbasePrice * existing.count + record.coinbasePrice) / (existing.count + 1);
         
-        // Update difference
-        existing.difference = record.binancePrice - record.coinbasePrice;
+        // Recalculate the difference based on the current average prices
+        existing.difference = existing.binancePrice - existing.coinbasePrice;
+        existing.absoluteDifference = Math.abs(existing.difference);
         
-        // Update the directional differences
+        // Update the directional differences based on the recalculated difference
         if (existing.difference > 0) {
           existing.binanceHigher = existing.difference;
           existing.coinbaseHigher = 0;
         } else {
           existing.binanceHigher = 0;
           existing.coinbaseHigher = Math.abs(existing.difference);
-        }
-        
-        if (record.absoluteDifference > existing.absoluteDifference) {
-          existing.absoluteDifference = record.absoluteDifference;
         }
         
         existing.count += 1;
