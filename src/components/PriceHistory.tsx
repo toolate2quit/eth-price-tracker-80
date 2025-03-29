@@ -1,3 +1,4 @@
+
 import { useState, useMemo } from 'react';
 import { PriceDifferenceRecord } from '@/types';
 import { Card } from '@/components/ui/card';
@@ -15,7 +16,8 @@ import {
   Tooltip,
   ResponsiveContainer,
   ReferenceLine,
-  Legend
+  Legend,
+  Cell
 } from 'recharts';
 
 interface PriceHistoryProps {
@@ -267,13 +269,15 @@ const PriceHistory: React.FC<PriceHistoryProps> = ({ records }) => {
                   }}
                 />
                 <ReferenceLine y={0} stroke="#666" />
-                <Bar 
-                  dataKey={chartType}
-                  name={chartType === 'difference' ? 'Price Difference' : 'Absolute Difference'}
-                  fill={(chartType === 'difference') ? 
-                    (datum => (datum.difference >= 0 ? "#10B981" : "#EF4444")) : "#10B981"
-                  }
-                />
+                {chartType === 'difference' ? (
+                  <Bar dataKey={chartType} name="Price Difference" fill="#10B981">
+                    {chartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.difference >= 0 ? "#10B981" : "#EF4444"} />
+                    ))}
+                  </Bar>
+                ) : (
+                  <Bar dataKey={chartType} name="Absolute Difference" fill="#10B981" />
+                )}
               </BarChart>
             </ResponsiveContainer>
           )}
