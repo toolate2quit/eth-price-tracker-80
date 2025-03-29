@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from 'react';
 import { PriceDifferenceRecord } from '@/types';
 import { Card } from '@/components/ui/card';
@@ -289,7 +288,7 @@ const PriceHistory: React.FC<PriceHistoryProps> = ({ records }) => {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="time" />
                 <YAxis 
-                  domain={[0, getMaxDifference()]} 
+                  domain={[0, getMaxSpread()]} 
                   tickFormatter={(value) => `$${value.toFixed(0)}`}
                   label={{ value: 'Price Difference (USD)', angle: -90, position: 'insideLeft', offset: 0, style: { textAnchor: 'middle' } }}
                 />
