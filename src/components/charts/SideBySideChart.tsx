@@ -21,7 +21,7 @@ const SideBySideChart: React.FC<SideBySideChartProps> = ({
       <BarChart 
         data={chartData} 
         margin={{ top: 10, right: 30, left: 20, bottom: 0 }}
-        barCategoryGap={5} // Small gap between time intervals
+        barGap={0}  // No gap between bars in same category
       >
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="time" />
@@ -48,13 +48,13 @@ const SideBySideChart: React.FC<SideBySideChartProps> = ({
           dataKey="binancePrice" 
           name="Binance" 
           fill="#F0B90B" 
-          barSize={7}
+          barSize={10}
         />
         <Bar 
           dataKey="coinbasePrice" 
           name="Coinbase" 
           fill="#0052FF" 
-          barSize={7}
+          barSize={10}
         />
       </BarChart>
     </ResponsiveContainer>

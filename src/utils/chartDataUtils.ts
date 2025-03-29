@@ -71,7 +71,7 @@ export const getFormattedData = (records: PriceDifferenceRecord[], timeRange: st
       existing.absoluteDifference = Math.abs(diff);
       existing.spread = Math.abs(diff);
       
-      // Update the exchange-specific difference values (crucial for showing both bars)
+      // Update the exchange-specific difference values
       existing.binanceHigher = diff > 0 ? Math.abs(diff) : 0;
       existing.coinbaseHigher = diff < 0 ? Math.abs(diff) : 0;
       
@@ -99,7 +99,9 @@ export const getFormattedData = (records: PriceDifferenceRecord[], timeRange: st
   // Add dummy data if we have no actual data to visualize
   if (result.length === 0) {
     const now = new Date();
-    // Create example data with both values populated
+    
+    // Create several example data points to ensure we see multiple bars
+    // First data point
     result.push({
       timestamp: now,
       time: formatTime(now),
@@ -113,7 +115,7 @@ export const getFormattedData = (records: PriceDifferenceRecord[], timeRange: st
       count: 1
     });
     
-    // Add a second data point to ensure we see multiple bars
+    // Second data point - 5 min later
     const fiveMinLater = new Date(now.getTime() + 5 * 60 * 1000);
     result.push({
       timestamp: fiveMinLater,
@@ -124,6 +126,21 @@ export const getFormattedData = (records: PriceDifferenceRecord[], timeRange: st
       absoluteDifference: 15,
       spread: 15,
       binanceHigher: 15,
+      coinbaseHigher: 0,
+      count: 1
+    });
+    
+    // Third data point - 10 min later
+    const tenMinLater = new Date(now.getTime() + 10 * 60 * 1000);
+    result.push({
+      timestamp: tenMinLater,
+      time: formatTime(tenMinLater),
+      binancePrice: 2025,
+      coinbasePrice: 2015,
+      difference: 10,
+      absoluteDifference: 10,
+      spread: 10,
+      binanceHigher: 10,
       coinbaseHigher: 0,
       count: 1
     });
@@ -171,3 +188,4 @@ export const getMaxSpread = (chartData: any[]) => {
 export const formatYAxisTick = (value: number) => {
   return `$${value.toFixed(0)}`;
 };
+

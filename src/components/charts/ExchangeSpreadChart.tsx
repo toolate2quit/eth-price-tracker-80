@@ -19,7 +19,7 @@ const ExchangeSpreadChart: React.FC<ExchangeSpreadChartProps> = ({
       <BarChart 
         data={chartData} 
         margin={{ top: 10, right: 30, left: 20, bottom: 0 }}
-        barCategoryGap={5} // Small gap between time intervals
+        barGap={0}  // No gap between bars in same category
       >
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="time" />
@@ -50,13 +50,13 @@ const ExchangeSpreadChart: React.FC<ExchangeSpreadChartProps> = ({
           dataKey="binanceHigher" 
           name="Binance Higher" 
           fill="#F0B90B" 
-          barSize={7}
+          barSize={10}
         />
         <Bar 
           dataKey="coinbaseHigher" 
           name="Coinbase Higher" 
           fill="#0052FF" 
-          barSize={7}
+          barSize={10}
         />
       </BarChart>
     </ResponsiveContainer>
