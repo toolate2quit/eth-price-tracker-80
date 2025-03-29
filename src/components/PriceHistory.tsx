@@ -127,6 +127,11 @@ const PriceHistory: React.FC<PriceHistoryProps> = ({ records }) => {
     return Math.ceil(max * 1.2); // Add 20% padding
   };
 
+  // Format the Y-axis tick values
+  const formatYAxisTick = (value: number) => {
+    return `$${value.toFixed(0)}`;
+  };
+
   return (
     <Card className="p-4 glassmorphism">
       <div className="flex flex-col space-y-4">
@@ -173,13 +178,17 @@ const PriceHistory: React.FC<PriceHistoryProps> = ({ records }) => {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart 
                 data={chartData} 
-                margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                margin={{ top: 10, right: 30, left: 20, bottom: 0 }}
                 barGap={0} // Set the gap between bars to 0
                 barCategoryGap={8} // Set the gap between categories (time intervals)
               >
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="time" />
-                <YAxis domain={[getMinPrice(), getMaxPrice()]} />
+                <YAxis 
+                  domain={[getMinPrice(), getMaxPrice()]} 
+                  tickFormatter={formatYAxisTick}
+                  label={{ value: 'Price (USD)', angle: -90, position: 'insideLeft', offset: 0, style: { textAnchor: 'middle' } }}
+                />
                 <Tooltip
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
@@ -204,10 +213,14 @@ const PriceHistory: React.FC<PriceHistoryProps> = ({ records }) => {
             </ResponsiveContainer>
           ) : chartType === 'prices' ? (
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+              <BarChart data={chartData} margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="time" />
-                <YAxis domain={[getMinPrice(), getMaxPrice()]} />
+                <YAxis 
+                  domain={[getMinPrice(), getMaxPrice()]} 
+                  tickFormatter={formatYAxisTick}
+                  label={{ value: 'Price (USD)', angle: -90, position: 'insideLeft', offset: 0, style: { textAnchor: 'middle' } }}
+                />
                 <Tooltip
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
@@ -231,11 +244,13 @@ const PriceHistory: React.FC<PriceHistoryProps> = ({ records }) => {
             </ResponsiveContainer>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+              <BarChart data={chartData} margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="time" />
                 <YAxis 
                   domain={[0, getMaxDifference()]} 
+                  tickFormatter={(value) => `$${value.toFixed(0)}`}
+                  label={{ value: 'Price Difference (USD)', angle: -90, position: 'insideLeft', offset: 0, style: { textAnchor: 'middle' } }}
                 />
                 <Tooltip
                   content={({ active, payload }) => {
