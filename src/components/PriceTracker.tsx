@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { PriceData, PriceDifferenceRecord } from '@/types';
 import { 
@@ -24,6 +23,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { 
   ArrowDown, 
   ArrowUp, 
@@ -43,8 +43,8 @@ const PriceTracker = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [websocketsEnabled, setWebsocketsEnabled] = useState(true);
-  const [simulatedDataMode, setSimulatedDataMode] = useState(false);
+  const [websocketsEnabled, setWebsocketsEnabled] = useState(false); // Start with WebSockets disabled
+  const [simulatedDataMode, setSimulatedDataMode] = useState(true); // Start with simulated data
   const [connectionStatus, setConnectionStatus] = useState({
     binance: false,
     coinbase: false
@@ -71,6 +71,10 @@ const PriceTracker = () => {
         description: "Connecting to exchange WebSockets...",
       });
       
+      // Also disable simulated data if turning on websockets
+      setSimulatedDataMode(false);
+      toggleSimulatedData(false);
+      
       const status = initializeWebSockets();
       setConnectionStatus(status);
     } else {
@@ -84,6 +88,10 @@ const PriceTracker = () => {
         binance: false,
         coinbase: false
       });
+      
+      // Enable simulated data when disabling websockets
+      setSimulatedDataMode(true);
+      toggleSimulatedData(true);
     }
   };
   
@@ -91,6 +99,12 @@ const PriceTracker = () => {
   const handleSimulatedDataToggle = (enabled: boolean) => {
     setSimulatedDataMode(enabled);
     toggleSimulatedData(enabled);
+    
+    // If enabling simulated data, disable WebSockets
+    if (enabled && websocketsEnabled) {
+      setWebsocketsEnabled(false);
+      closeWebSockets();
+    }
   };
   
   // Handle WebSocket reset
@@ -199,17 +213,8 @@ const PriceTracker = () => {
 
   // Initialize WebSockets and setup price fetching on component mount
   useEffect(() => {
-    // Initialize WebSockets on first load
-    if (websocketsEnabled) {
-      const status = initializeWebSockets();
-      setConnectionStatus(status);
-      
-      // Check if we should start in simulated mode
-      const usingSimulated = isUsingSimulatedData();
-      if (usingSimulated !== simulatedDataMode) {
-        setSimulatedDataMode(usingSimulated);
-      }
-    }
+    // Start with simulated data and WebSockets disabled by default for better reliability
+    toggleSimulatedData(true);
     
     // Fetch prices immediately
     fetchPrices();
@@ -222,7 +227,7 @@ const PriceTracker = () => {
       clearInterval(intervalId);
       closeWebSockets();
     };
-  }, [fetchPrices, websocketsEnabled, simulatedDataMode]);
+  }, [fetchPrices]);
 
   // Load saved price records from localStorage on initial load
   useEffect(() => {
@@ -307,20 +312,31 @@ const PriceTracker = () => {
         </div>
         
         <div className="flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-4">
-          {/* Data mode toggle - simulated vs real */}
+          {/* Data Source Toggle with ToggleGroup */}
           <div className="flex items-center space-x-2">
-            <Switch
-              checked={simulatedDataMode}
-              onCheckedChange={handleSimulatedDataToggle}
-              id="simulated-mode"
-            />
-            <label
-              htmlFor="simulated-mode"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-1"
-            >
-              <ActivitySquare className="h-3 w-3" />
-              {simulatedDataMode ? 'Using Simulated Data' : 'Using Real Data'}
-            </label>
+            <span className="text-sm font-medium">Data Source:</span>
+            <ToggleGroup type="single" defaultValue="simulated" aria-label="Data Source">
+              <ToggleGroupItem 
+                value="simulated" 
+                aria-label="Simulated Data"
+                onClick={() => handleSimulatedDataToggle(true)}
+                data-state={simulatedDataMode ? 'on' : 'off'}
+                className="flex items-center gap-1"
+              >
+                <ActivitySquare className="h-3 w-3" />
+                Simulated
+              </ToggleGroupItem>
+              <ToggleGroupItem 
+                value="real" 
+                aria-label="Real Data"
+                onClick={() => handleSimulatedDataToggle(false)}
+                data-state={!simulatedDataMode ? 'on' : 'off'}
+                className="flex items-center gap-1"
+              >
+                <Wifi className="h-3 w-3" />
+                Real
+              </ToggleGroupItem>
+            </ToggleGroup>
           </div>
           
           {/* WebSocket Toggle */}
@@ -340,7 +356,7 @@ const PriceTracker = () => {
           </div>
           
           {/* Reset connection button */}
-          {websocketsEnabled && !simulatedDataMode && (
+          {!simulatedDataMode && (
             <Button 
               variant="outline" 
               size="sm" 
@@ -392,6 +408,7 @@ const PriceTracker = () => {
         </div>
       </div>
       
+      {/* Rest of the component remains the same */}
       {/* Price displays */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {loading ? (

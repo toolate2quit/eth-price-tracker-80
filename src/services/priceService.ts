@@ -1,3 +1,4 @@
+
 import { PriceData } from '@/types';
 import { toast } from '@/hooks/use-toast';
 
@@ -22,7 +23,7 @@ const MAX_RECONNECT_ATTEMPTS = 5;
 const RECONNECT_DELAY_MS = 3000; // 3 seconds initial delay
 const MAX_RECONNECT_DELAY_MS = 30000; // 30 seconds max delay
 
-// New: Set this to true to force using simulated data (for testing/debugging)
+// Set this to true to force using simulated data (for testing/debugging)
 let forceSimulatedData = false;
 
 // Helper for exponential backoff
@@ -48,8 +49,8 @@ const initBinanceWebSocket = (): void => {
       return;
     }
     
-    // Use WebSocket without SSL for better compatibility
-    binanceSocket = new WebSocket('ws://stream.binance.com:9443/ws/ethusdt@ticker');
+    // Using wss:// to address security issues
+    binanceSocket = new WebSocket('wss://stream.binance.com/ws/ethusdt@ticker');
     
     binanceSocket.onopen = () => {
       console.log('Binance WebSocket connected');
@@ -141,8 +142,8 @@ const initCoinbaseWebSocket = (): void => {
       return;
     }
     
-    // Updated Coinbase WebSocket URL - using the updated endpoint that doesn't require SSL
-    coinbaseSocket = new WebSocket('ws://ws-feed.exchange.coinbase.com');
+    // Updated Coinbase WebSocket URL using wss:// protocol
+    coinbaseSocket = new WebSocket('wss://ws-feed.exchange.coinbase.com');
     
     coinbaseSocket.onopen = () => {
       console.log('Coinbase WebSocket connected');
@@ -328,7 +329,7 @@ export const resetConnections = (): void => {
   });
 };
 
-// New function to toggle between real and simulated data
+// Toggle between real and simulated data
 export const toggleSimulatedData = (useSimulated: boolean): void => {
   forceSimulatedData = useSimulated;
   
