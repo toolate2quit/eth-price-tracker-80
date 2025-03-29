@@ -1,4 +1,3 @@
-
 import { PriceDifferenceRecord } from '@/types';
 
 export const formatTime = (date: Date) => {
@@ -42,9 +41,11 @@ export const getFormattedData = (records: PriceDifferenceRecord[], timeRange: st
     
     const timeKey = roundedTimestamp.getTime();
     
+    // Calculate the price difference
+    const diff = record.binancePrice - record.coinbasePrice;
+    
     if (!groupedData.has(timeKey)) {
       // For the first record in this time interval, create a new entry
-      const diff = record.binancePrice - record.coinbasePrice;
       groupedData.set(timeKey, {
         timestamp: roundedTimestamp,
         time: formatTime(roundedTimestamp),
@@ -61,18 +62,18 @@ export const getFormattedData = (records: PriceDifferenceRecord[], timeRange: st
       // For subsequent records in the same time interval, update the entry
       const existing = groupedData.get(timeKey);
       
-      // Instead of averaging, we'll simply replace the values
-      // This ensures the most recent value for each 5-minute interval is displayed
+      // Update prices
       existing.binancePrice = record.binancePrice;
       existing.coinbasePrice = record.coinbasePrice;
       
       // Recalculate the difference metrics based on current prices
-      const diff = existing.binancePrice - existing.coinbasePrice;
+      const diff = record.binancePrice - record.coinbasePrice;
       existing.difference = diff;
       existing.absoluteDifference = Math.abs(diff);
       existing.spread = Math.abs(diff);
       
       // Update the exchange-specific difference values
+      // This is key: we store the actual spread in the appropriate column based on which exchange is higher
       existing.binanceHigher = diff > 0 ? Math.abs(diff) : 0;
       existing.coinbaseHigher = diff < 0 ? Math.abs(diff) : 0;
       
@@ -88,7 +89,7 @@ export const getFormattedData = (records: PriceDifferenceRecord[], timeRange: st
   
   // Make sure all data points have the necessary properties
   result.forEach(item => {
-    // Ensure these properties exist for every data point
+    // Ensure both properties exist for every data point 
     if (item.binanceHigher === undefined) item.binanceHigher = 0;
     if (item.coinbaseHigher === undefined) item.coinbaseHigher = 0;
     
@@ -108,11 +109,11 @@ export const getFormattedData = (records: PriceDifferenceRecord[], timeRange: st
   return result;
 };
 
-// Function to create dummy/test data
+// Function to create dummy/test data with both exchanges being higher at different times
 const createDummyData = (result: any[]) => {
   const now = new Date();
   
-  // First data point
+  // First data point - Coinbase higher
   result.push({
     timestamp: now,
     time: formatTime(now),
@@ -126,7 +127,7 @@ const createDummyData = (result: any[]) => {
     count: 1
   });
   
-  // Second data point - 5 min later
+  // Second data point - 5 min later - Binance higher
   const fiveMinLater = new Date(now.getTime() + 5 * 60 * 1000);
   result.push({
     timestamp: fiveMinLater,
@@ -141,7 +142,7 @@ const createDummyData = (result: any[]) => {
     count: 1
   });
   
-  // Third data point - 10 min later
+  // Third data point - 10 min later - Binance higher
   const tenMinLater = new Date(now.getTime() + 10 * 60 * 1000);
   result.push({
     timestamp: tenMinLater,
@@ -153,6 +154,21 @@ const createDummyData = (result: any[]) => {
     spread: 10,
     binanceHigher: 10,
     coinbaseHigher: 0,
+    count: 1
+  });
+  
+  // Fourth data point - 15 min later - Coinbase higher
+  const fifteenMinLater = new Date(now.getTime() + 15 * 60 * 1000);
+  result.push({
+    timestamp: fifteenMinLater,
+    time: formatTime(fifteenMinLater),
+    binancePrice: 2010,
+    coinbasePrice: 2030,
+    difference: -20,
+    absoluteDifference: 20,
+    spread: 20,
+    binanceHigher: 0,
+    coinbaseHigher: 20,
     count: 1
   });
 };
