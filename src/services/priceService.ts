@@ -23,8 +23,11 @@ const MAX_RECONNECT_ATTEMPTS = 5;
 const RECONNECT_DELAY_MS = 3000; // 3 seconds initial delay
 const MAX_RECONNECT_DELAY_MS = 30000; // 30 seconds max delay
 
-// Set this to true to force using simulated data (for testing/debugging)
-let forceSimulatedData = true; // Start with simulated data by default
+// Start with simulated data by default
+let forceSimulatedData = true;
+
+// Record why we're using simulated data for user feedback
+let simulatedDataReason = "WebSockets are disabled";
 
 // Helper for exponential backoff
 const getReconnectDelay = (attempts: number): number => {
@@ -49,8 +52,11 @@ const initBinanceWebSocket = (): void => {
       return;
     }
     
+    simulatedDataReason = "Connecting to exchanges...";
+    
     // Using wss:// to address security issues
-    binanceSocket = new WebSocket('wss://stream.binance.com/ws/ethusdt@ticker');
+    console.log('Attempting to connect to Binance WebSocket...');
+    binanceSocket = new WebSocket('wss://stream.binance.com:9443/ws/ethusdt@ticker');
     
     binanceSocket.onopen = () => {
       console.log('Binance WebSocket connected');
@@ -79,6 +85,7 @@ const initBinanceWebSocket = (): void => {
         // Handle pong response or ticker data
         if (data.c) { // If it contains the 'c' field, it's ticker data
           latestBinancePrice = parseFloat(data.c); // Current price is in the 'c' field
+          console.log('Received real price from Binance:', latestBinancePrice);
         }
       } catch (error) {
         console.error('Error parsing Binance data:', error);
@@ -88,6 +95,7 @@ const initBinanceWebSocket = (): void => {
     binanceSocket.onerror = (error) => {
       console.error('Binance WebSocket error:', error);
       connectionStatus.binance = false;
+      simulatedDataReason = "Connection error with Binance";
       
       // Try an alternative connection if this is the first error
       if (binanceReconnectAttempts === 0) {
@@ -106,6 +114,7 @@ const initBinanceWebSocket = (): void => {
         const delay = getReconnectDelay(binanceReconnectAttempts);
         binanceReconnectAttempts++;
         
+        simulatedDataReason = `Reconnecting to Binance (Attempt ${binanceReconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`;
         console.log(`Attempting to reconnect to Binance in ${delay/1000} seconds... (Attempt ${binanceReconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`);
         
         setTimeout(() => {
@@ -114,6 +123,7 @@ const initBinanceWebSocket = (): void => {
           }
         }, delay);
       } else {
+        simulatedDataReason = "Max reconnection attempts reached for Binance";
         console.log('Max reconnection attempts reached for Binance. Falling back to simulated data.');
         toast({
           title: "Binance Connection Failed",
@@ -125,6 +135,7 @@ const initBinanceWebSocket = (): void => {
   } catch (error) {
     console.error('Error initializing Binance WebSocket:', error);
     connectionStatus.binance = false;
+    simulatedDataReason = "Error initializing Binance connection";
   }
 };
 
@@ -143,6 +154,7 @@ const initCoinbaseWebSocket = (): void => {
     }
     
     // Updated Coinbase WebSocket URL using wss:// protocol
+    console.log('Attempting to connect to Coinbase WebSocket...');
     coinbaseSocket = new WebSocket('wss://ws-feed.exchange.coinbase.com');
     
     coinbaseSocket.onopen = () => {
@@ -181,6 +193,7 @@ const initCoinbaseWebSocket = (): void => {
         // Handle different message types
         if (data.type === 'ticker' && data.product_id === 'ETH-USD') {
           latestCoinbasePrice = parseFloat(data.price);
+          console.log('Received real price from Coinbase:', latestCoinbasePrice);
         } else if (data.type === 'pong') {
           // Heartbeat response, connection is still alive
           console.log('Received heartbeat from Coinbase');
@@ -193,6 +206,7 @@ const initCoinbaseWebSocket = (): void => {
     coinbaseSocket.onerror = (error) => {
       console.error('Coinbase WebSocket error:', error);
       connectionStatus.coinbase = false;
+      simulatedDataReason = "Connection error with Coinbase";
       
       // Try an alternative connection if this is the first error
       if (coinbaseReconnectAttempts === 0) {
@@ -211,6 +225,7 @@ const initCoinbaseWebSocket = (): void => {
         const delay = getReconnectDelay(coinbaseReconnectAttempts);
         coinbaseReconnectAttempts++;
         
+        simulatedDataReason = `Reconnecting to Coinbase (Attempt ${coinbaseReconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`;
         console.log(`Attempting to reconnect to Coinbase in ${delay/1000} seconds... (Attempt ${coinbaseReconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`);
         
         setTimeout(() => {
@@ -219,6 +234,7 @@ const initCoinbaseWebSocket = (): void => {
           }
         }, delay);
       } else {
+        simulatedDataReason = "Max reconnection attempts reached for Coinbase";
         console.log('Max reconnection attempts reached for Coinbase. Falling back to simulated data.');
         toast({
           title: "Coinbase Connection Failed",
@@ -230,6 +246,7 @@ const initCoinbaseWebSocket = (): void => {
   } catch (error) {
     console.error('Error initializing Coinbase WebSocket:', error);
     connectionStatus.coinbase = false;
+    simulatedDataReason = "Error initializing Coinbase connection";
   }
 };
 
@@ -285,6 +302,7 @@ export const fetchPrice = async (exchange: string): Promise<PriceData> => {
     return fallbackFetchPrice(exchange);
   }
   
+  console.log(`Using real data for ${exchange}`);
   return {
     exchange,
     price: exchange === 'binance' ? latestBinancePrice! : latestCoinbasePrice!,
@@ -319,6 +337,11 @@ const fallbackFetchPrice = async (exchange: string): Promise<PriceData> => {
 // Get WebSocket connection status
 export const getConnectionStatus = (): { binance: boolean; coinbase: boolean } => {
   return { ...connectionStatus };
+};
+
+// Get the reason for using simulated data
+export const getSimulatedDataReason = (): string => {
+  return simulatedDataReason;
 };
 
 // Reset connection states and attempt to reconnect
@@ -358,6 +381,7 @@ export const toggleSimulatedData = (useSimulated: boolean): void => {
     forceSimulatedData = useSimulated;
     
     if (useSimulated) {
+      simulatedDataReason = "Simulated data mode enabled by user";
       // Close any existing connections
       closeWebSockets();
       toast({
@@ -365,6 +389,7 @@ export const toggleSimulatedData = (useSimulated: boolean): void => {
         description: "Now using simulated data for price information.",
       });
     } else {
+      simulatedDataReason = "Attempting to connect to exchanges...";
       // Try to reconnect
       toast({
         title: "Real Data Mode",

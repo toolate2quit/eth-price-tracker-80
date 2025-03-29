@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { PriceData, PriceDifferenceRecord } from '@/types';
 import { 
@@ -8,7 +7,8 @@ import {
   getConnectionStatus,
   resetConnections,
   toggleSimulatedData,
-  isUsingSimulatedData
+  isUsingSimulatedData,
+  getSimulatedDataReason
 } from '@/services/priceService';
 import { 
   calculatePriceDifference, 
@@ -32,7 +32,8 @@ import {
   RefreshCw, 
   Wifi, 
   WifiOff,
-  ActivitySquare
+  ActivitySquare,
+  AlertCircle
 } from 'lucide-react';
 
 // Constants
@@ -46,6 +47,7 @@ const PriceTracker = () => {
   const [error, setError] = useState<string | null>(null);
   const [websocketsEnabled, setWebsocketsEnabled] = useState(false); // Start with WebSockets disabled
   const [simulatedDataMode, setSimulatedDataMode] = useState(true); // Start with simulated data
+  const [simulatedDataReason, setSimulatedDataReason] = useState("WebSockets are disabled");
   const [connectionStatus, setConnectionStatus] = useState({
     binance: false,
     coinbase: false
@@ -200,10 +202,11 @@ const PriceTracker = () => {
         fetchPrice('coinbase')
       ]);
       
-      // Update connection status
+      // Update connection status and simulated data reason
       if (websocketsEnabled) {
         const currentStatus = getConnectionStatus();
         setConnectionStatus(currentStatus);
+        setSimulatedDataReason(getSimulatedDataReason());
       }
       
       // Store previous prices for animation
@@ -429,7 +432,32 @@ const PriceTracker = () => {
         </div>
       </div>
       
-      {/* Rest of the component remains the same */}
+      {/* Data Source Information Banner */}
+      {isUsingSimulatedData() && (
+        <Card className="p-4 border-yellow-500 bg-yellow-50 dark:bg-yellow-950 dark:border-yellow-700">
+          <div className="flex items-start space-x-3">
+            <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
+            <div>
+              <h3 className="font-medium text-yellow-800 dark:text-yellow-300">Using Simulated Data</h3>
+              <p className="text-sm text-yellow-700 dark:text-yellow-400">
+                {simulatedDataReason}. Price data shown is not real exchange data.
+              </p>
+              {!simulatedDataMode && websocketsEnabled && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleResetConnections}
+                  className="mt-2 bg-yellow-100 hover:bg-yellow-200 dark:bg-yellow-900 dark:hover:bg-yellow-800 text-yellow-800 dark:text-yellow-300 border-yellow-400"
+                >
+                  <RefreshCw className="h-3 w-3 mr-2" />
+                  Try Again
+                </Button>
+              )}
+            </div>
+          </div>
+        </Card>
+      )}
+      
       {/* Price displays */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {loading ? (
@@ -456,6 +484,7 @@ const PriceTracker = () => {
         )}
       </div>
       
+      {/* Rest of the component */}
       {/* Price difference indicator */}
       <Card className="p-6 glassmorphism transition-all duration-500">
         <div className="flex flex-col items-center justify-center space-y-2">
