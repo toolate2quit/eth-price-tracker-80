@@ -1,3 +1,4 @@
+
 import { useState, useMemo } from 'react';
 import { PriceDifferenceRecord } from '@/types';
 import { Card } from '@/components/ui/card';
@@ -93,7 +94,7 @@ const PriceHistory: React.FC<PriceHistoryProps> = ({ records }) => {
           absoluteDifference: record.absoluteDifference,
           // Add separate properties for each exchange's difference from the other
           binanceHigher: record.difference > 0 ? record.difference : 0,
-          coinbaseHigher: record.difference < 0 ? -record.difference : 0, // Make this positive for display
+          coinbaseHigher: record.difference < 0 ? Math.abs(record.difference) : 0, // Make this positive for display
           count: 1
         });
       } else {
@@ -101,16 +102,16 @@ const PriceHistory: React.FC<PriceHistoryProps> = ({ records }) => {
         existing.binancePrice = (existing.binancePrice * existing.count + record.binancePrice) / (existing.count + 1);
         existing.coinbasePrice = (existing.coinbasePrice * existing.count + record.coinbasePrice) / (existing.count + 1);
         
-        // Update the directional differences
-        if (record.difference > 0 && record.difference > existing.binanceHigher) {
-          existing.binanceHigher = record.difference;
-        } else if (record.difference < 0 && -record.difference > existing.coinbaseHigher) {
-          existing.coinbaseHigher = -record.difference;
-        }
+        // Update difference
+        existing.difference = record.binancePrice - record.coinbasePrice;
         
-        // For difference, we want to keep the maximum difference in this interval
-        if (Math.abs(record.difference) > Math.abs(existing.difference)) {
-          existing.difference = record.difference;
+        // Update the directional differences
+        if (existing.difference > 0) {
+          existing.binanceHigher = existing.difference;
+          existing.coinbaseHigher = 0;
+        } else {
+          existing.binanceHigher = 0;
+          existing.coinbaseHigher = Math.abs(existing.difference);
         }
         
         if (record.absoluteDifference > existing.absoluteDifference) {
@@ -278,8 +279,16 @@ const PriceHistory: React.FC<PriceHistoryProps> = ({ records }) => {
                   }}
                 />
                 <ReferenceLine y={0} stroke="#666" />
-                <Bar dataKey="binanceHigher" name="Binance Higher" fill="#10B981" />
-                <Bar dataKey="coinbaseHigher" name="Coinbase Higher" fill="#EF4444" stackId="stack" />
+                <Bar dataKey="binanceHigher" name="Binance Higher" fill="#10B981">
+                  {chartData.map((entry, index) => (
+                    <Cell key={`cell-binance-${index}`} fill="#10B981" />
+                  ))}
+                </Bar>
+                <Bar dataKey="coinbaseHigher" name="Coinbase Higher" stackId="stack" isAnimationActive={false}>
+                  {chartData.map((entry, index) => (
+                    <Cell key={`cell-coinbase-${index}`} fill="#EF4444" />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           ) : (
