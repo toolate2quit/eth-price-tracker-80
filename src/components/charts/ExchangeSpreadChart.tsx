@@ -1,6 +1,5 @@
 
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Legend } from 'recharts';
-import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
 
 interface ExchangeSpreadChartProps {
   chartData: any[];
@@ -14,6 +13,13 @@ const ExchangeSpreadChart: React.FC<ExchangeSpreadChartProps> = ({
   formatYAxisTick 
 }) => {
   console.log('ExchangeSpreadChart data:', chartData);
+  
+  // Filter data to only include entries where each exchange has higher values
+  const binanceHigherData = chartData.filter(item => item.binanceHigher > 0);
+  const coinbaseHigherData = chartData.filter(item => item.coinbaseHigher > 0);
+
+  console.log('Binance higher data points:', binanceHigherData.length);
+  console.log('Coinbase higher data points:', coinbaseHigherData.length);
   
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-full">
