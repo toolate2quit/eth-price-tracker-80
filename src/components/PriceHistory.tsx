@@ -16,7 +16,7 @@ const PriceHistory: React.FC<PriceHistoryProps> = ({ records }) => {
   const [chartType, setChartType] = useState<string>('spread');
 
   const chartData = getFormattedData(records, timeRange);
-
+  
   return (
     <Card className="p-4 glassmorphism">
       <div className="flex flex-col space-y-4">

@@ -4,9 +4,10 @@ import { formatDateTime, formatPrice } from '@/utils/priceUtils';
 interface TooltipProps {
   active?: boolean;
   payload?: any[];
+  label?: string;
 }
 
-const PriceChartTooltip: React.FC<TooltipProps> = ({ active, payload }) => {
+const PriceChartTooltip: React.FC<TooltipProps> = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     return (

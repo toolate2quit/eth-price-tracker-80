@@ -20,7 +20,7 @@ const ChartRenderer: React.FC<ChartRendererProps> = ({ chartData, chartType }) =
     }
   }, [chartType, currentChart]);
 
-  if (chartData.length === 0) {
+  if (!chartData || chartData.length === 0) {
     return (
       <div className="h-full w-full flex items-center justify-center">
         <p className="text-muted-foreground">No data available for selected time range</p>
@@ -80,7 +80,7 @@ const ChartRenderer: React.FC<ChartRendererProps> = ({ chartData, chartType }) =
   };
 
   return (
-    <div>
+    <div className="h-full w-full">
       {renderChart()}
     </div>
   );

@@ -24,7 +24,7 @@ const ExchangeSpreadChart: React.FC<ExchangeSpreadChartProps> = ({
           tickFormatter={formatYAxisTick}
           label={{ value: 'Price Spread (USD)', angle: -90, position: 'insideLeft', offset: 0, style: { textAnchor: 'middle' } }}
         />
-        <Tooltip content={PriceChartTooltip} />
+        <Tooltip content={<PriceChartTooltip />} />
         <Legend 
           wrapperStyle={{ paddingTop: '10px' }}
           formatter={(value) => (

@@ -16,7 +16,10 @@ const SpreadBarChart: React.FC<SpreadBarChartProps> = ({
 }) => {
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={chartData} margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
+      <BarChart 
+        data={chartData} 
+        margin={{ top: 10, right: 30, left: 20, bottom: 0 }}
+      >
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="time" />
         <YAxis 
@@ -24,7 +27,7 @@ const SpreadBarChart: React.FC<SpreadBarChartProps> = ({
           tickFormatter={formatYAxisTick}
           label={{ value: 'Price Spread (USD)', angle: -90, position: 'insideLeft', offset: 0, style: { textAnchor: 'middle' } }}
         />
-        <Tooltip content={PriceChartTooltip} />
+        <Tooltip content={<PriceChartTooltip />} />
         <Legend 
           wrapperStyle={{ paddingTop: '10px' }}
           formatter={(value) => (
