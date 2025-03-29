@@ -17,7 +17,11 @@ import {
   ResponsiveContainer,
   ReferenceLine,
   Legend,
-  Cell
+  Cell,
+  Line,
+  LineChart,
+  Area,
+  AreaChart
 } from 'recharts';
 
 interface PriceHistoryProps {
@@ -26,7 +30,7 @@ interface PriceHistoryProps {
 
 const PriceHistory: React.FC<PriceHistoryProps> = ({ records }) => {
   const [timeRange, setTimeRange] = useState<string>('day');
-  const [chartType, setChartType] = useState<string>('sideBySide');
+  const [chartType, setChartType] = useState<string>('spread');
 
   // Group data into 5-minute intervals
   const getFormattedData = () => {
@@ -71,6 +75,7 @@ const PriceHistory: React.FC<PriceHistoryProps> = ({ records }) => {
           coinbasePrice: record.coinbasePrice,
           difference: record.difference,
           absoluteDifference: Math.abs(record.difference),
+          spread: Math.abs(record.difference),
           count: 1
         });
       } else {
@@ -79,9 +84,10 @@ const PriceHistory: React.FC<PriceHistoryProps> = ({ records }) => {
         existing.binancePrice = (existing.binancePrice * existing.count + record.binancePrice) / (existing.count + 1);
         existing.coinbasePrice = (existing.coinbasePrice * existing.count + record.coinbasePrice) / (existing.count + 1);
         
-        // Recalculate the difference based on the current average prices
+        // Recalculate the difference and spread based on the current average prices
         existing.difference = existing.binancePrice - existing.coinbasePrice;
         existing.absoluteDifference = Math.abs(existing.difference);
+        existing.spread = Math.abs(existing.difference);
         existing.count += 1;
       }
     });
@@ -119,11 +125,11 @@ const PriceHistory: React.FC<PriceHistoryProps> = ({ records }) => {
     return chartType === 'sideBySide' ? Math.floor(min * 0.98) : 0;
   };
 
-  // Get max difference for the Y-axis
-  const getMaxDifference = () => {
+  // Get max spread for the Y-axis
+  const getMaxSpread = () => {
     if (!chartData.length) return 100;
     
-    const max = Math.max(...chartData.map(d => d.absoluteDifference));
+    const max = Math.max(...chartData.map(d => d.spread));
     return Math.ceil(max * 1.2); // Add 20% padding
   };
 
@@ -147,8 +153,8 @@ const PriceHistory: React.FC<PriceHistoryProps> = ({ records }) => {
                 <SelectValue placeholder="Chart Type" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="spread">Price Spread</SelectItem>
                 <SelectItem value="sideBySide">Side by Side Prices</SelectItem>
-                <SelectItem value="absoluteDifference">Absolute Difference</SelectItem>
                 <SelectItem value="prices">Exchange Prices</SelectItem>
               </SelectContent>
             </Select>
@@ -174,6 +180,41 @@ const PriceHistory: React.FC<PriceHistoryProps> = ({ records }) => {
             <div className="h-full w-full flex items-center justify-center">
               <p className="text-muted-foreground">No data available for selected time range</p>
             </div>
+          ) : chartType === 'spread' ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="time" />
+                <YAxis 
+                  domain={[0, getMaxSpread()]} 
+                  tickFormatter={formatYAxisTick}
+                  label={{ value: 'Price Spread (USD)', angle: -90, position: 'insideLeft', offset: 0, style: { textAnchor: 'middle' } }}
+                />
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      const data = payload[0].payload;
+                      return (
+                        <div className="rounded-lg border bg-background p-2 shadow-md">
+                          <p className="font-medium">{formatDateTime(data.timestamp)}</p>
+                          <p>Binance: {formatPrice(data.binancePrice)}</p>
+                          <p>Coinbase: {formatPrice(data.coinbasePrice)}</p>
+                          <p>Spread: {formatPrice(data.spread)}</p>
+                          <p>Samples: {data.count}</p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Legend />
+                <Bar 
+                  dataKey="spread" 
+                  name="Price Spread" 
+                  fill="#10B981" 
+                />
+              </BarChart>
+            </ResponsiveContainer>
           ) : chartType === 'sideBySide' ? (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart 
