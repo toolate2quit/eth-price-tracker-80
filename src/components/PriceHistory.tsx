@@ -34,7 +34,7 @@ const PriceHistory: React.FC<PriceHistoryProps> = ({ records }) => {
           />
         </div>
         
-        <div className="h-[400px] w-full mt-4">
+        <div className="h-[500px] w-full mt-4">
           <ChartRenderer chartData={chartData} chartType={chartType} />
         </div>
         
