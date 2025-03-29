@@ -19,7 +19,6 @@ const ExchangeSpreadChart: React.FC<ExchangeSpreadChartProps> = ({
       <BarChart 
         data={chartData} 
         margin={{ top: 10, right: 30, left: 20, bottom: 0 }}
-        barGap={0}  // Set barGap to 0 to ensure bars are side by side
       >
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="time" />
@@ -50,15 +49,13 @@ const ExchangeSpreadChart: React.FC<ExchangeSpreadChartProps> = ({
           dataKey="binanceHigher" 
           name="Binance Higher" 
           fill="#F0B90B" 
-          barSize={20}
-          stackId="a"  // Use stackId to stack the bars
+          barSize={15}
         />
         <Bar 
           dataKey="coinbaseHigher" 
           name="Coinbase Higher" 
           fill="#0052FF" 
-          barSize={20}
-          stackId="b"  // Different stackId to prevent stacking with binanceHigher
+          barSize={15}
         />
       </BarChart>
     </ResponsiveContainer>
