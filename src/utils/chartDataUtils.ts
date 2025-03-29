@@ -1,4 +1,3 @@
-
 import { PriceDifferenceRecord } from '@/types';
 
 export const formatTime = (date: Date) => {
@@ -67,14 +66,25 @@ export const getFormattedData = (records: PriceDifferenceRecord[], timeRange: st
       existing.difference = diff;
       existing.absoluteDifference = Math.abs(diff);
       existing.spread = Math.abs(diff);
+      
+      // Ensure both binanceHigher and coinbaseHigher are properly calculated
       existing.binanceHigher = diff > 0 ? Math.abs(diff) : 0;
       existing.coinbaseHigher = diff < 0 ? Math.abs(diff) : 0;
+      
       existing.count += 1;
     }
   });
 
-  // Convert Map to array
-  return Array.from(groupedData.values());
+  // Convert Map to array and ensure every item has both binanceHigher and coinbaseHigher defined
+  const result = Array.from(groupedData.values());
+  
+  // Make sure all data points have the necessary properties
+  result.forEach(item => {
+    if (item.binanceHigher === undefined) item.binanceHigher = 0;
+    if (item.coinbaseHigher === undefined) item.coinbaseHigher = 0;
+  });
+  
+  return result;
 };
 
 // Get maximum price for the Y-axis
