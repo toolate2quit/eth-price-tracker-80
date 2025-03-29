@@ -49,11 +49,13 @@ const SideBySideChart: React.FC<SideBySideChartProps> = ({
           dataKey="binancePrice" 
           name="Binance" 
           fill="#F0B90B" 
+          barSize={20}
         />
         <Bar 
           dataKey="coinbasePrice" 
           name="Coinbase" 
           fill="#0052FF" 
+          barSize={20}
         />
       </BarChart>
     </ResponsiveContainer>

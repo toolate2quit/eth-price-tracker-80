@@ -1,3 +1,4 @@
+
 import { PriceDifferenceRecord } from '@/types';
 
 export const formatTime = (date: Date) => {
@@ -84,6 +85,23 @@ export const getFormattedData = (records: PriceDifferenceRecord[], timeRange: st
     if (item.coinbaseHigher === undefined) item.coinbaseHigher = 0;
   });
   
+  // Add dummy data if we have no actual data to visualize
+  if (result.length === 0) {
+    const now = new Date();
+    result.push({
+      timestamp: now,
+      time: formatTime(now),
+      binancePrice: 2000,
+      coinbasePrice: 2010,
+      difference: -10,
+      absoluteDifference: 10,
+      spread: 10,
+      binanceHigher: 0,
+      coinbaseHigher: 10,
+      count: 1
+    });
+  }
+  
   return result;
 };
 
@@ -118,7 +136,8 @@ export const getMaxSpread = (chartData: any[]) => {
   const maxCoinbaseHigher = Math.max(...chartData.map(d => d.coinbaseHigher || 0));
   const max = Math.max(maxBinanceHigher, maxCoinbaseHigher);
   
-  return Math.ceil(max * 1.2); // Add 20% padding
+  // If both values are 0 or very small, return a default value for better visualization
+  return max < 5 ? 10 : Math.ceil(max * 1.2); // Add 20% padding
 };
 
 // Format the Y-axis tick values

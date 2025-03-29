@@ -46,11 +46,13 @@ const ExchangeSpreadChart: React.FC<ExchangeSpreadChartProps> = ({
           dataKey="binanceHigher" 
           name="Binance Higher" 
           fill="#F0B90B" 
+          barSize={20}
         />
         <Bar 
           dataKey="coinbaseHigher" 
           name="Coinbase Higher" 
           fill="#0052FF" 
+          barSize={20}
         />
       </BarChart>
     </ResponsiveContainer>
