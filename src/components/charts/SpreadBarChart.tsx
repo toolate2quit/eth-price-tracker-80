@@ -1,6 +1,5 @@
 
-import { useState } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, ReferenceLine, Tooltip } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts';
 
 interface SpreadBarChartProps {
   chartData: { time: string; maxBinanceSpread: number; maxCoinbaseSpread: number }[];
@@ -16,30 +15,6 @@ const SpreadBarChart: React.FC<SpreadBarChartProps> = ({
   console.log('SpreadBarChart data:', chartData);
 
   const maxSpread = getMaxSpread();
-  
-  // State for active cursor position
-  const [activeData, setActiveData] = useState<{ time: string; value: number } | null>(null);
-
-  const handleMouseMove = (e: any) => {
-    if (e && e.activePayload && e.activePayload.length) {
-      // Direct use of activeLabel from the event
-      const time = e.activeLabel;
-      // Extract maximum value from the hovered data point
-      const value = Math.max(
-        e.activePayload[0].payload.maxBinanceSpread || 0, 
-        e.activePayload[0].payload.maxCoinbaseSpread || 0
-      );
-      console.log('Mouse move - time:', time, 'value:', value);
-      setActiveData({ time, value });
-    } else {
-      console.log('Mouse move - no active payload');
-    }
-  };
-
-  const handleMouseLeave = () => {
-    console.log('Mouse left chart');
-    setActiveData(null);
-  };
 
   return (
     <ResponsiveContainer width="100%" height="100%">
@@ -47,8 +22,6 @@ const SpreadBarChart: React.FC<SpreadBarChartProps> = ({
         data={chartData} 
         margin={{ top: 10, right: 30, left: 20, bottom: 20 }}
         barSize={20}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
       >
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="time" />
@@ -57,22 +30,31 @@ const SpreadBarChart: React.FC<SpreadBarChartProps> = ({
           tickFormatter={formatYAxisTick}
           label={{ value: 'Max Spread (USD)', angle: -90, position: 'insideLeft' }}
         />
-        
-        {/* Dynamic crosshair lines */}
-        {activeData && (
-          <>
-            <ReferenceLine x={activeData.time} stroke="#ccc" strokeDasharray="3 3" />
-            <ReferenceLine y={activeData.value} stroke="#ccc" strokeDasharray="3 3" />
-          </>
-        )}
-        
-        {/* Use the custom tooltip but hide its content */}
         <Tooltip 
-          cursor={false} // Hide default cursor - we use custom reference lines instead
-          contentStyle={{ display: 'none' }} // Hide default tooltip content
+          cursor={{ stroke: '#ccc', strokeDasharray: '3 3', strokeWidth: 1 }}
+          content={({ active, payload, coordinate }) => {
+            if (active && payload && payload.length && coordinate) {
+              return (
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: 0,
+                    width: '100%',
+                    height: '1px',
+                    background: '#ccc',
+                    top: `${coordinate.y}px`,
+                    pointerEvents: 'none',
+                    borderStyle: 'dashed',
+                    borderWidth: '1px',
+                    borderColor: '#ccc',
+                  }}
+                />
+              );
+            }
+            return null;
+          }}
           isAnimationActive={false}
         />
-        
         <Bar 
           dataKey="maxBinanceSpread" 
           name="Binance Max Spread" 
