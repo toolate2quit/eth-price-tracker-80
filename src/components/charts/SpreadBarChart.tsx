@@ -1,5 +1,5 @@
 
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Legend } from 'recharts';
 
 interface SpreadBarChartProps {
   chartData: { time: string; maxBinanceSpread: number; maxCoinbaseSpread: number }[];
@@ -30,14 +30,15 @@ const SpreadBarChart: React.FC<SpreadBarChartProps> = ({
           tickFormatter={formatYAxisTick}
           label={{ value: 'Max Spread (USD)', angle: -90, position: 'insideLeft' }}
         />
+        <Legend />
         <Bar 
           dataKey="maxBinanceSpread" 
-          name="Binance Max Spread" 
+          name="Binance Higher" 
           fill="rgba(34, 197, 94, 0.6)" // Green
         />
         <Bar 
           dataKey="maxCoinbaseSpread" 
-          name="Coinbase Max Spread" 
+          name="Coinbase Higher" 
           fill="rgba(239, 68, 68, 0.6)" // Red
         />
       </BarChart>

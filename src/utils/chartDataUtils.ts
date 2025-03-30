@@ -6,21 +6,85 @@ export const formatTime = (date: Date) => {
 };
 
 export const getFormattedData = (records: PriceDifferenceRecord[], timeRange: string, chartType: string) => {
-  const now = new Date();
-  const result = [
-    { time: formatTime(now), maxBinanceSpread: 10, maxCoinbaseSpread: 5 },
-    { time: formatTime(new Date(now.getTime() + 5 * 60 * 1000)), maxBinanceSpread: 15, maxCoinbaseSpread: 8 },
-    { time: formatTime(new Date(now.getTime() + 10 * 60 * 1000)), maxBinanceSpread: 7, maxCoinbaseSpread: 12 },
-  ];
+  if (!records || records.length === 0) {
+    console.log('No price records available');
+    return [];
+  }
 
-  console.log('Forced chart data:', result);
-  return result;
+  console.log(`Formatting ${records.length} records for ${chartType} chart with ${timeRange} time range`);
+  
+  // Filter records based on time range
+  const filteredRecords = filterRecordsByTimeRange(records, timeRange);
+  console.log(`After time filtering: ${filteredRecords.length} records`);
+  
+  // Format data based on chart type
+  switch (chartType) {
+    case 'spread':
+      return formatSpreadData(filteredRecords);
+    case 'exchangeSpread':
+      return formatExchangeSpreadData(filteredRecords);
+    case 'sideBySide':
+    case 'prices':
+      return formatPriceData(filteredRecords);
+    default:
+      return formatSpreadData(filteredRecords);
+  }
+};
+
+const filterRecordsByTimeRange = (records: PriceDifferenceRecord[], timeRange: string): PriceDifferenceRecord[] => {
+  const now = new Date();
+  let cutoffTime: Date;
+  
+  switch (timeRange) {
+    case 'hour':
+      cutoffTime = new Date(now.getTime() - 60 * 60 * 1000); // 1 hour ago
+      break;
+    case 'day':
+      cutoffTime = new Date(now.getTime() - 24 * 60 * 60 * 1000); // 24 hours ago
+      break;
+    case 'week':
+      cutoffTime = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000); // 1 week ago
+      break;
+    case 'month':
+      cutoffTime = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000); // 30 days ago
+      break;
+    case 'all':
+    default:
+      // Return all records
+      return [...records];
+  }
+  
+  return records.filter(record => record.timestamp >= cutoffTime);
+};
+
+const formatSpreadData = (records: PriceDifferenceRecord[]) => {
+  return records.map(record => ({
+    time: formatTime(record.timestamp),
+    maxBinanceSpread: record.difference > 0 ? Math.abs(record.difference) : 0,
+    maxCoinbaseSpread: record.difference < 0 ? Math.abs(record.difference) : 0
+  }));
+};
+
+const formatExchangeSpreadData = (records: PriceDifferenceRecord[]) => {
+  return records.map(record => ({
+    time: formatTime(record.timestamp),
+    binanceHigher: record.difference > 0 ? record.difference : 0,
+    coinbaseHigher: record.difference < 0 ? Math.abs(record.difference) : 0
+  }));
+};
+
+const formatPriceData = (records: PriceDifferenceRecord[]) => {
+  return records.map(record => ({
+    time: formatTime(record.timestamp),
+    binancePrice: record.binancePrice,
+    coinbasePrice: record.coinbasePrice
+  }));
 };
 
 export const getMaxSpread = (chartData: any[]) => {
   if (!chartData.length) return 100;
-  const maxBinance = Math.max(...chartData.map(d => d.maxBinanceSpread || 0));
-  const maxCoinbase = Math.max(...chartData.map(d => d.maxCoinbaseSpread || 0));
+  const maxBinance = Math.max(...chartData.map(d => d.maxBinanceSpread || d.binanceHigher || 0));
+  const maxCoinbase = Math.max(...chartData.map(d => d.maxCoinbaseSpread || d.coinbaseHigher || 0));
   return Math.max(maxBinance, maxCoinbase, 5) * 1.2;
 };
 
