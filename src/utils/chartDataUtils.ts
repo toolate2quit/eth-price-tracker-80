@@ -1,4 +1,3 @@
-
 import { PriceDifferenceRecord } from '@/types';
 
 export const formatTime = (date: Date) => {
@@ -23,7 +22,7 @@ export const getFormattedData = (records: PriceDifferenceRecord[], timeRange: st
     filteredRecords = records.filter(record => new Date(record.timestamp) >= oneMonthAgo);
   }
 
-  // Sort by timestamp (ensure timestamp is a Date object)
+  // Sort by timestamp
   filteredRecords.sort((a, b) => {
     const aTime = a.timestamp instanceof Date ? a.timestamp.getTime() : new Date(a.timestamp).getTime();
     const bTime = b.timestamp instanceof Date ? b.timestamp.getTime() : new Date(b.timestamp).getTime();
@@ -48,10 +47,9 @@ export const getFormattedData = (records: PriceDifferenceRecord[], timeRange: st
     
     const timeKey = roundedTimestamp.getTime();
     
-    // Calculate the price difference
-    const diff = record.binancePrice - record.coinbasePrice;
-    const binanceSpread = diff > 0 ? diff : 0; // Binance over Coinbase
-    const coinbaseSpread = diff < 0 ? Math.abs(diff) : 0; // Coinbase over Binance
+    // Calculate spreads in both directions
+    const binanceSpread = record.binancePrice - record.coinbasePrice; // Binance over Coinbase
+    const coinbaseSpread = record.coinbasePrice - record.binancePrice; // Coinbase over Binance
     
     if (!groupedData.has(timeKey)) {
       // For the first record in this time interval, create a new entry
@@ -60,11 +58,11 @@ export const getFormattedData = (records: PriceDifferenceRecord[], timeRange: st
         time: formatTime(roundedTimestamp),
         binancePrice: record.binancePrice,
         coinbasePrice: record.coinbasePrice,
-        difference: diff,
-        absoluteDifference: Math.abs(diff),
-        spread: Math.abs(diff),
-        maxBinanceSpread: binanceSpread,
-        maxCoinbaseSpread: coinbaseSpread,
+        difference: binanceSpread,
+        absoluteDifference: Math.abs(binanceSpread),
+        spread: Math.abs(binanceSpread),
+        maxBinanceSpread: binanceSpread > 0 ? binanceSpread : 0,
+        maxCoinbaseSpread: coinbaseSpread > 0 ? coinbaseSpread : 0,
         count: 1
       });
     } else {
@@ -76,13 +74,13 @@ export const getFormattedData = (records: PriceDifferenceRecord[], timeRange: st
       existing.coinbasePrice = record.coinbasePrice;
       
       // Recalculate the difference metrics
-      existing.difference = diff;
-      existing.absoluteDifference = Math.abs(diff);
-      existing.spread = Math.abs(diff);
+      existing.difference = binanceSpread;
+      existing.absoluteDifference = Math.abs(binanceSpread);
+      existing.spread = Math.abs(binanceSpread);
       
       // Track maximum spreads in each direction
-      existing.maxBinanceSpread = Math.max(existing.maxBinanceSpread, binanceSpread);
-      existing.maxCoinbaseSpread = Math.max(existing.maxCoinbaseSpread, coinbaseSpread);
+      existing.maxBinanceSpread = Math.max(existing.maxBinanceSpread, binanceSpread > 0 ? binanceSpread : 0);
+      existing.maxCoinbaseSpread = Math.max(existing.maxCoinbaseSpread, coinbaseSpread > 0 ? coinbaseSpread : 0);
       
       existing.count += 1;
     }
@@ -96,25 +94,19 @@ export const getFormattedData = (records: PriceDifferenceRecord[], timeRange: st
   
   // Make sure all data points have the necessary properties
   result.forEach(item => {
-    // Ensure both properties exist for every data point 
-    if (item.maxBinanceSpread === undefined) item.maxBinanceSpread = 0;
-    if (item.maxCoinbaseSpread === undefined) item.maxCoinbaseSpread = 0;
-    if (item.binancePrice === undefined) console.error('Missing binancePrice in data point:', item);
-    if (item.coinbasePrice === undefined) console.error('Missing coinbasePrice in data point:', item);
-    
     // Round values to avoid floating point weirdness
-    item.binancePrice = parseFloat(item.binancePrice.toFixed(2));
-    item.coinbasePrice = parseFloat(item.coinbasePrice.toFixed(2));
+    if (item.binancePrice !== undefined) item.binancePrice = parseFloat(item.binancePrice.toFixed(2));
+    if (item.coinbasePrice !== undefined) item.coinbasePrice = parseFloat(item.coinbasePrice.toFixed(2));
     item.maxBinanceSpread = parseFloat(item.maxBinanceSpread.toFixed(2));
     item.maxCoinbaseSpread = parseFloat(item.maxCoinbaseSpread.toFixed(2));
-    item.spread = parseFloat(item.spread.toFixed(2));
+    if (item.spread !== undefined) item.spread = parseFloat(item.spread.toFixed(2));
   });
   
-  // Force dummy data for testing
-  console.log('Before dummy data:', result);
-  result.length = 0; // Clear existing data
-  createDummyData(result); // Add varied data
-  console.log('After dummy data:', result);
+  // Force dummy data for testing if no data is available
+  if (result.length === 0) {
+    createDummyData(result);
+    console.log('Created dummy data:', result);
+  }
   
   return result;
 };
