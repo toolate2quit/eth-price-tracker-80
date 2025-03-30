@@ -16,11 +16,7 @@ const SpreadBarChart: React.FC<SpreadBarChartProps> = ({
   console.log('SpreadBarChart data:', chartData);
 
   const maxSpread = getMaxSpread();
-  // Calculate average spread for reference line
-  const averageSpread = chartData.length 
-    ? (chartData.reduce((sum, d) => sum + Math.max(d.maxBinanceSpread, d.maxCoinbaseSpread), 0) / chartData.length).toFixed(2)
-    : 0;
-
+  
   // State for active cursor position
   const [activeData, setActiveData] = useState<{ time: string; value: number } | null>(null);
 
@@ -52,13 +48,7 @@ const SpreadBarChart: React.FC<SpreadBarChartProps> = ({
           tickFormatter={formatYAxisTick}
           label={{ value: 'Max Spread (USD)', angle: -90, position: 'insideLeft' }}
         />
-        {/* Static horizontal reference line */}
-        <ReferenceLine 
-          y={averageSpread} 
-          stroke="#888" 
-          strokeDasharray="5 5" 
-          label={{ value: `Avg: $${averageSpread}`, position: 'insideTopRight', fill: '#888' }}
-        />
+        
         {/* Dynamic crosshair lines */}
         {activeData && (
           <>
@@ -66,12 +56,14 @@ const SpreadBarChart: React.FC<SpreadBarChartProps> = ({
             <ReferenceLine y={activeData.value} stroke="#ccc" strokeDasharray="3 3" />
           </>
         )}
+        
         {/* Tooltip for cursor position */}
         <Tooltip 
           cursor={{ stroke: '#ccc', strokeDasharray: '3 3' }}
           contentStyle={{ display: 'none' }} // Hide default tooltip content
           isAnimationActive={false}
         />
+        
         <Bar 
           dataKey="maxBinanceSpread" 
           name="Binance Max Spread" 
