@@ -13,6 +13,8 @@ const SpreadBarChart: React.FC<SpreadBarChartProps> = ({
   getMaxSpread, 
   formatYAxisTick 
 }) => {
+  console.log('SpreadBarChart data:', chartData); // Debug the input data
+  
   return (
     <ResponsiveContainer width="100%" height="100%">
       <BarChart 

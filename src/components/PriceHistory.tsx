@@ -15,7 +15,9 @@ const PriceHistory: React.FC<PriceHistoryProps> = ({ records }) => {
   const [timeRange, setTimeRange] = useState<string>('day');
   const [chartType, setChartType] = useState<string>('spread');
 
-  const chartData = getFormattedData(records, timeRange);
+  const chartData = getFormattedData(records, timeRange, chartType);
+  
+  console.log('PriceHistory chartData:', chartData);
   
   return (
     <Card className="p-4 glassmorphism">
@@ -40,8 +42,8 @@ const PriceHistory: React.FC<PriceHistoryProps> = ({ records }) => {
         
         <div className="text-xs text-muted-foreground">
           <p>
-            Showing {chartData.length} intervals with data grouped in 5-minute bars. 
-            Data is collected every 5 minutes and stored for 30 days.
+            Showing {chartData.length || 0} intervals with data grouped in 5-minute bars. 
+            Green: Binance higher. Red: Coinbase higher.
           </p>
         </div>
       </div>

@@ -5,7 +5,7 @@ export const formatTime = (date: Date) => {
   return new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 
-export const getFormattedData = (records: PriceDifferenceRecord[], timeRange: string) => {
+export const getFormattedData = (records: PriceDifferenceRecord[], timeRange: string, chartType?: string) => {
   if (!records.length) return [];
 
   // Filter data based on time range
