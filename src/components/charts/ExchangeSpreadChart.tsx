@@ -1,5 +1,5 @@
 
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
 
 interface ExchangeSpreadChartProps {
   chartData: any[];
@@ -45,10 +45,6 @@ const ExchangeSpreadChart: React.FC<ExchangeSpreadChartProps> = ({
               tickFormatter={formatYAxisTick}
               label={{ value: 'Spread (USD)', angle: -90, position: 'insideLeft', offset: 0, style: { textAnchor: 'middle' } }}
             />
-            <Tooltip 
-              formatter={(value: any) => [`$${Number(value).toFixed(2)}`, 'Binance Higher']}
-              labelFormatter={(label) => `Time: ${label}`}
-            />
             <Bar 
               dataKey="binanceHigher" 
               name="Binance Higher" 
@@ -75,10 +71,6 @@ const ExchangeSpreadChart: React.FC<ExchangeSpreadChartProps> = ({
               domain={[0, maxChartValue]} 
               tickFormatter={formatYAxisTick}
               label={{ value: 'Spread (USD)', angle: -90, position: 'insideLeft', offset: 0, style: { textAnchor: 'middle' } }}
-            />
-            <Tooltip 
-              formatter={(value: any) => [`$${Number(value).toFixed(2)}`, 'Coinbase Higher']}
-              labelFormatter={(label) => `Time: ${label}`}
             />
             <Bar 
               dataKey="coinbaseHigher" 
