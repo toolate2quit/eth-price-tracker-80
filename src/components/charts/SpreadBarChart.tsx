@@ -22,9 +22,14 @@ const SpreadBarChart: React.FC<SpreadBarChartProps> = ({
 
   const handleMouseMove = (e: any) => {
     if (e && e.activePayload && e.activePayload.length) {
-      const time = e.activeLabel; // Corrected: e.activeLabel is already the string value
-      const value = Math.max(e.activePayload[0].payload.maxBinanceSpread, e.activePayload[0].payload.maxCoinbaseSpread);
-      console.log('Mouse move - time:', time, 'value:', value); // Debug log
+      // Direct use of activeLabel from the event
+      const time = e.activeLabel;
+      // Extract maximum value from the hovered data point
+      const value = Math.max(
+        e.activePayload[0].payload.maxBinanceSpread || 0, 
+        e.activePayload[0].payload.maxCoinbaseSpread || 0
+      );
+      console.log('Mouse move - time:', time, 'value:', value);
       setActiveData({ time, value });
     } else {
       console.log('Mouse move - no active payload');
@@ -61,9 +66,9 @@ const SpreadBarChart: React.FC<SpreadBarChartProps> = ({
           </>
         )}
         
-        {/* Tooltip for cursor position */}
+        {/* Use the custom tooltip but hide its content */}
         <Tooltip 
-          cursor={{ stroke: '#ccc', strokeDasharray: '3 3' }}
+          cursor={false} // Hide default cursor - we use custom reference lines instead
           contentStyle={{ display: 'none' }} // Hide default tooltip content
           isAnimationActive={false}
         />
