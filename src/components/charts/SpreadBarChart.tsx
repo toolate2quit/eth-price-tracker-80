@@ -1,5 +1,5 @@
 
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Legend } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
 interface SpreadBarChartProps {
@@ -18,7 +18,8 @@ const SpreadBarChart: React.FC<SpreadBarChartProps> = ({
       <BarChart 
         data={chartData} 
         margin={{ top: 10, right: 30, left: 20, bottom: 0 }}
-        barSize={40}
+        barSize={20}
+        barGap={5}
       >
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="time" />
@@ -26,6 +27,10 @@ const SpreadBarChart: React.FC<SpreadBarChartProps> = ({
           domain={[0, getMaxSpread()]} 
           tickFormatter={formatYAxisTick}
           label={{ value: 'Price Spread (USD)', angle: -90, position: 'insideLeft', offset: 0, style: { textAnchor: 'middle' } }}
+        />
+        <Tooltip 
+          formatter={(value: number, name: string) => [`$${value.toFixed(2)}`, name]}
+          labelFormatter={(label) => `Time: ${label}`}
         />
         <Legend 
           wrapperStyle={{ paddingTop: '10px' }}
@@ -35,15 +40,20 @@ const SpreadBarChart: React.FC<SpreadBarChartProps> = ({
                 <span className="text-sm font-medium cursor-help hover:text-primary transition-colors">{value}</span>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Price difference between exchanges</p>
+                <p>{value === 'Binance > Coinbase' ? 'Spread when Binance price is higher' : 'Spread when Coinbase price is higher'}</p>
               </TooltipContent>
             </UITooltip>
           )}
         />
         <Bar 
-          dataKey="spread" 
-          name="Price Spread" 
-          fill="#10B981" 
+          dataKey="binanceHigher" 
+          name="Binance > Coinbase" 
+          fill="rgba(34, 197, 94, 0.8)" 
+        />
+        <Bar 
+          dataKey="coinbaseHigher" 
+          name="Coinbase > Binance" 
+          fill="rgba(239, 68, 68, 0.8)" 
         />
       </BarChart>
     </ResponsiveContainer>
