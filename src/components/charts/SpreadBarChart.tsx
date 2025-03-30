@@ -15,7 +15,6 @@ const SpreadBarChart: React.FC<SpreadBarChartProps> = ({
   console.log('SpreadBarChart data:', chartData);
 
   const maxSpread = getMaxSpread();
-  const maxChartValue = Math.max(maxSpread, 5);
 
   return (
     <ResponsiveContainer width="100%" height="100%">
@@ -27,7 +26,7 @@ const SpreadBarChart: React.FC<SpreadBarChartProps> = ({
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="time" />
         <YAxis 
-          domain={[0, maxChartValue]} 
+          domain={[0, maxSpread]} 
           tickFormatter={formatYAxisTick}
           label={{ value: 'Max Spread (USD)', angle: -90, position: 'insideLeft' }}
         />
