@@ -22,13 +22,17 @@ const SpreadBarChart: React.FC<SpreadBarChartProps> = ({
 
   const handleMouseMove = (e: any) => {
     if (e && e.activePayload && e.activePayload.length) {
-      const time = e.activeLabel;
+      const time = e.activeLabel; // Corrected: e.activeLabel is already the string value
       const value = Math.max(e.activePayload[0].payload.maxBinanceSpread, e.activePayload[0].payload.maxCoinbaseSpread);
+      console.log('Mouse move - time:', time, 'value:', value); // Debug log
       setActiveData({ time, value });
+    } else {
+      console.log('Mouse move - no active payload');
     }
   };
 
   const handleMouseLeave = () => {
+    console.log('Mouse left chart');
     setActiveData(null);
   };
 
