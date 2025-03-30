@@ -50,6 +50,8 @@ export const getFormattedData = (records: PriceDifferenceRecord[], timeRange: st
     
     // Calculate the price difference
     const diff = record.binancePrice - record.coinbasePrice;
+    const binanceSpread = diff > 0 ? diff : 0; // Binance over Coinbase
+    const coinbaseSpread = diff < 0 ? Math.abs(diff) : 0; // Coinbase over Binance
     
     if (!groupedData.has(timeKey)) {
       // For the first record in this time interval, create a new entry
@@ -61,8 +63,8 @@ export const getFormattedData = (records: PriceDifferenceRecord[], timeRange: st
         difference: diff,
         absoluteDifference: Math.abs(diff),
         spread: Math.abs(diff),
-        binanceHigher: diff > 0 ? Math.abs(diff) : 0,
-        coinbaseHigher: diff < 0 ? Math.abs(diff) : 0,
+        maxBinanceSpread: binanceSpread,
+        maxCoinbaseSpread: coinbaseSpread,
         count: 1
       });
     } else {
@@ -74,14 +76,13 @@ export const getFormattedData = (records: PriceDifferenceRecord[], timeRange: st
       existing.coinbasePrice = record.coinbasePrice;
       
       // Recalculate the difference metrics
-      const diff = record.binancePrice - record.coinbasePrice;
       existing.difference = diff;
       existing.absoluteDifference = Math.abs(diff);
       existing.spread = Math.abs(diff);
       
-      // Update the exchange-specific difference values
-      existing.binanceHigher = diff > 0 ? Math.abs(diff) : 0;
-      existing.coinbaseHigher = diff < 0 ? Math.abs(diff) : 0;
+      // Track maximum spreads in each direction
+      existing.maxBinanceSpread = Math.max(existing.maxBinanceSpread, binanceSpread);
+      existing.maxCoinbaseSpread = Math.max(existing.maxCoinbaseSpread, coinbaseSpread);
       
       existing.count += 1;
     }
@@ -96,16 +97,16 @@ export const getFormattedData = (records: PriceDifferenceRecord[], timeRange: st
   // Make sure all data points have the necessary properties
   result.forEach(item => {
     // Ensure both properties exist for every data point 
-    if (item.binanceHigher === undefined) item.binanceHigher = 0;
-    if (item.coinbaseHigher === undefined) item.coinbaseHigher = 0;
+    if (item.maxBinanceSpread === undefined) item.maxBinanceSpread = 0;
+    if (item.maxCoinbaseSpread === undefined) item.maxCoinbaseSpread = 0;
     if (item.binancePrice === undefined) console.error('Missing binancePrice in data point:', item);
     if (item.coinbasePrice === undefined) console.error('Missing coinbasePrice in data point:', item);
     
     // Round values to avoid floating point weirdness
     item.binancePrice = parseFloat(item.binancePrice.toFixed(2));
     item.coinbasePrice = parseFloat(item.coinbasePrice.toFixed(2));
-    item.binanceHigher = parseFloat(item.binanceHigher.toFixed(2));
-    item.coinbaseHigher = parseFloat(item.coinbaseHigher.toFixed(2));
+    item.maxBinanceSpread = parseFloat(item.maxBinanceSpread.toFixed(2));
+    item.maxCoinbaseSpread = parseFloat(item.maxCoinbaseSpread.toFixed(2));
     item.spread = parseFloat(item.spread.toFixed(2));
   });
   
@@ -131,8 +132,8 @@ const createDummyData = (result: any[]) => {
     difference: -10,
     absoluteDifference: 10,
     spread: 10,
-    binanceHigher: 0,
-    coinbaseHigher: 10,
+    maxBinanceSpread: 0,
+    maxCoinbaseSpread: 10,
     count: 1
   });
   
@@ -146,8 +147,8 @@ const createDummyData = (result: any[]) => {
     difference: 15,
     absoluteDifference: 15,
     spread: 15,
-    binanceHigher: 15,
-    coinbaseHigher: 0,
+    maxBinanceSpread: 15,
+    maxCoinbaseSpread: 0,
     count: 1
   });
   
@@ -161,8 +162,8 @@ const createDummyData = (result: any[]) => {
     difference: 10,
     absoluteDifference: 10,
     spread: 10,
-    binanceHigher: 10,
-    coinbaseHigher: 0,
+    maxBinanceSpread: 10,
+    maxCoinbaseSpread: 0,
     count: 1
   });
   
@@ -176,8 +177,8 @@ const createDummyData = (result: any[]) => {
     difference: -20,
     absoluteDifference: 20,
     spread: 20,
-    binanceHigher: 0,
-    coinbaseHigher: 20,
+    maxBinanceSpread: 0,
+    maxCoinbaseSpread: 20,
     count: 1
   });
 };
@@ -209,9 +210,9 @@ export const getMinPrice = (chartData: any[], chartType: string) => {
 export const getMaxSpread = (chartData: any[]) => {
   if (!chartData.length) return 100;
   
-  const maxBinanceHigher = Math.max(...chartData.map(d => d.binanceHigher || 0));
-  const maxCoinbaseHigher = Math.max(...chartData.map(d => d.coinbaseHigher || 0));
-  const max = Math.max(maxBinanceHigher, maxCoinbaseHigher);
+  const maxBinanceSpread = Math.max(...chartData.map(d => d.maxBinanceSpread || 0));
+  const maxCoinbaseSpread = Math.max(...chartData.map(d => d.maxCoinbaseSpread || 0));
+  const max = Math.max(maxBinanceSpread, maxCoinbaseSpread);
   
   // If both values are 0 or very small, return a default value for better visualization
   return max < 5 ? 10 : Math.ceil(max * 1.2); // Add 20% padding

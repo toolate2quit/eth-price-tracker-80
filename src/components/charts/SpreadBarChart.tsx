@@ -2,7 +2,7 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts';
 
 interface SpreadBarChartProps {
-  chartData: { time: string; binanceHigher: number; coinbaseHigher: number }[];
+  chartData: { time: string; maxBinanceSpread: number; maxCoinbaseSpread: number }[];
   getMaxSpread: () => number;
   formatYAxisTick: (value: number) => string;
 }
@@ -29,20 +29,20 @@ const SpreadBarChart: React.FC<SpreadBarChartProps> = ({
         <YAxis 
           domain={[0, maxChartValue]} 
           tickFormatter={formatYAxisTick}
-          label={{ value: 'Spread (USD)', angle: -90, position: 'insideLeft' }}
+          label={{ value: 'Max Spread (USD)', angle: -90, position: 'insideLeft' }}
         />
         <Tooltip 
           formatter={(value: number, name: string) => [`$${value.toFixed(2)}`, name]}
           labelFormatter={(label) => `Time: ${label}`}
         />
         <Bar 
-          dataKey="binanceHigher" 
-          name="Binance > Coinbase" 
+          dataKey="maxBinanceSpread" 
+          name="Binance Max Spread" 
           fill="rgba(34, 197, 94, 0.6)" // Green
         />
         <Bar 
-          dataKey="coinbaseHigher" 
-          name="Coinbase > Binance" 
+          dataKey="maxCoinbaseSpread" 
+          name="Coinbase Max Spread" 
           fill="rgba(239, 68, 68, 0.6)" // Red
         />
       </BarChart>
