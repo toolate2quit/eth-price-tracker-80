@@ -14,24 +14,30 @@ export const getFormattedData = (records: PriceDifferenceRecord[], timeRange: st
 
   if (timeRange === 'day') {
     const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    filteredRecords = records.filter(record => record.timestamp >= oneDayAgo);
+    filteredRecords = records.filter(record => new Date(record.timestamp) >= oneDayAgo);
   } else if (timeRange === 'week') {
     const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    filteredRecords = records.filter(record => record.timestamp >= oneWeekAgo);
+    filteredRecords = records.filter(record => new Date(record.timestamp) >= oneWeekAgo);
   } else if (timeRange === 'month') {
     const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    filteredRecords = records.filter(record => record.timestamp >= oneMonthAgo);
+    filteredRecords = records.filter(record => new Date(record.timestamp) >= oneMonthAgo);
   }
 
-  // Sort by timestamp
-  filteredRecords.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+  // Sort by timestamp (ensure timestamp is a Date object)
+  filteredRecords.sort((a, b) => {
+    const aTime = a.timestamp instanceof Date ? a.timestamp.getTime() : new Date(a.timestamp).getTime();
+    const bTime = b.timestamp instanceof Date ? b.timestamp.getTime() : new Date(b.timestamp).getTime();
+    return aTime - bTime;
+  });
 
   // Group by 5-minute intervals
   const groupedData = new Map();
   
   filteredRecords.forEach(record => {
+    // Ensure timestamp is a Date object
+    const timestamp = record.timestamp instanceof Date ? record.timestamp : new Date(record.timestamp);
+    
     // Round to the nearest 5-minute interval
-    const timestamp = record.timestamp;
     const minutes = timestamp.getMinutes();
     const roundedMinutes = Math.floor(minutes / 5) * 5;
     
@@ -92,6 +98,8 @@ export const getFormattedData = (records: PriceDifferenceRecord[], timeRange: st
     // Ensure both properties exist for every data point 
     if (item.binanceHigher === undefined) item.binanceHigher = 0;
     if (item.coinbaseHigher === undefined) item.coinbaseHigher = 0;
+    if (item.binancePrice === undefined) console.error('Missing binancePrice in data point:', item);
+    if (item.coinbasePrice === undefined) console.error('Missing coinbasePrice in data point:', item);
     
     // Round values to avoid floating point weirdness
     item.binancePrice = parseFloat(item.binancePrice.toFixed(2));
