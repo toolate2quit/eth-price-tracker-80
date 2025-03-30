@@ -1,5 +1,6 @@
 
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
+import { useState } from 'react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, ReferenceLine, Tooltip } from 'recharts';
 
 interface SpreadBarChartProps {
   chartData: { time: string; maxBinanceSpread: number; maxCoinbaseSpread: number }[];
@@ -15,6 +16,25 @@ const SpreadBarChart: React.FC<SpreadBarChartProps> = ({
   console.log('SpreadBarChart data:', chartData);
 
   const maxSpread = getMaxSpread();
+  // Calculate average spread for reference line
+  const averageSpread = chartData.length 
+    ? (chartData.reduce((sum, d) => sum + Math.max(d.maxBinanceSpread, d.maxCoinbaseSpread), 0) / chartData.length).toFixed(2)
+    : 0;
+
+  // State for active cursor position
+  const [activeData, setActiveData] = useState<{ time: string; value: number } | null>(null);
+
+  const handleMouseMove = (e: any) => {
+    if (e && e.activePayload && e.activePayload.length) {
+      const time = e.activeLabel;
+      const value = Math.max(e.activePayload[0].payload.maxBinanceSpread, e.activePayload[0].payload.maxCoinbaseSpread);
+      setActiveData({ time, value });
+    }
+  };
+
+  const handleMouseLeave = () => {
+    setActiveData(null);
+  };
 
   return (
     <ResponsiveContainer width="100%" height="100%">
@@ -22,6 +42,8 @@ const SpreadBarChart: React.FC<SpreadBarChartProps> = ({
         data={chartData} 
         margin={{ top: 10, right: 30, left: 20, bottom: 20 }}
         barSize={20}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
       >
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="time" />
@@ -29,6 +51,26 @@ const SpreadBarChart: React.FC<SpreadBarChartProps> = ({
           domain={[0, maxSpread]} 
           tickFormatter={formatYAxisTick}
           label={{ value: 'Max Spread (USD)', angle: -90, position: 'insideLeft' }}
+        />
+        {/* Static horizontal reference line */}
+        <ReferenceLine 
+          y={averageSpread} 
+          stroke="#888" 
+          strokeDasharray="5 5" 
+          label={{ value: `Avg: $${averageSpread}`, position: 'insideTopRight', fill: '#888' }}
+        />
+        {/* Dynamic crosshair lines */}
+        {activeData && (
+          <>
+            <ReferenceLine x={activeData.time} stroke="#ccc" strokeDasharray="3 3" />
+            <ReferenceLine y={activeData.value} stroke="#ccc" strokeDasharray="3 3" />
+          </>
+        )}
+        {/* Tooltip for cursor position */}
+        <Tooltip 
+          cursor={{ stroke: '#ccc', strokeDasharray: '3 3' }}
+          contentStyle={{ display: 'none' }} // Hide default tooltip content
+          isAnimationActive={false}
         />
         <Bar 
           dataKey="maxBinanceSpread" 
