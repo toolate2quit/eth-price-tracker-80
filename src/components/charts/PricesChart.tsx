@@ -23,7 +23,9 @@ const PricesChart: React.FC<PricesChartProps> = ({
       <BarChart 
         data={chartData} 
         margin={{ top: 10, right: 30, left: 20, bottom: 0 }}
-        barCategoryGap="20%"
+        barSize={20}
+        barGap={8}
+        barCategoryGap={20}
       >
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="time" />
