@@ -109,10 +109,11 @@ export const getFormattedData = (records: PriceDifferenceRecord[], timeRange: st
     item.spread = parseFloat(item.spread.toFixed(2));
   });
   
-  // Add dummy data if we have no actual data to visualize
-  if (result.length === 0) {
-    createDummyData(result);
-  }
+  // Force dummy data for testing
+  console.log('Before dummy data:', result);
+  result.length = 0; // Clear existing data
+  createDummyData(result); // Add varied data
+  console.log('After dummy data:', result);
   
   return result;
 };
