@@ -54,7 +54,7 @@ const filterRecordsByTimeRange = (records: PriceDifferenceRecord[], timeRange: s
       return [...records];
   }
   
-  return records.filter(record => record.timestamp >= cutoffTime);
+  return records.filter(record => new Date(record.timestamp) >= cutoffTime);
 };
 
 const formatSpreadData = (records: PriceDifferenceRecord[]) => {
@@ -85,7 +85,7 @@ export const getMaxSpread = (chartData: any[]) => {
   if (!chartData.length) return 100;
   const maxBinance = Math.max(...chartData.map(d => d.maxBinanceSpread || d.binanceHigher || 0));
   const maxCoinbase = Math.max(...chartData.map(d => d.maxCoinbaseSpread || d.coinbaseHigher || 0));
-  return Math.max(maxBinance, maxCoinbase, 5) * 1.2;
+  return Math.max(maxBinance, maxCoinbase, 5) * 1.2; // Add 20% margin for better visualization
 };
 
 export const formatYAxisTick = (value: number) => `$${value.toFixed(0)}`;

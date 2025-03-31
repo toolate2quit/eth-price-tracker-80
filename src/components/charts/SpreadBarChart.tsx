@@ -21,6 +21,7 @@ const SpreadBarChart: React.FC<SpreadBarChartProps> = ({
       <BarChart 
         data={chartData} 
         margin={{ top: 10, right: 30, left: 20, bottom: 20 }}
+        barGap={5}
         barSize={20}
       >
         <CartesianGrid strokeDasharray="3 3" />
@@ -35,11 +36,13 @@ const SpreadBarChart: React.FC<SpreadBarChartProps> = ({
           dataKey="maxBinanceSpread" 
           name="Binance Higher" 
           fill="rgba(34, 197, 94, 0.6)" // Green
+          isAnimationActive={false}
         />
         <Bar 
           dataKey="maxCoinbaseSpread" 
           name="Coinbase Higher" 
           fill="rgba(239, 68, 68, 0.6)" // Red
+          isAnimationActive={false}
         />
       </BarChart>
     </ResponsiveContainer>
