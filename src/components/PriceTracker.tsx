@@ -125,6 +125,16 @@ const PriceTracker = () => {
     if (enabled && websocketsEnabled) {
       setWebsocketsEnabled(false);
       closeWebSockets();
+    } else if (!enabled) {
+      // If disabling simulated data, enable and initialize WebSockets
+      setWebsocketsEnabled(true);
+      const status = initializeWebSockets();
+      setConnectionStatus(status);
+      
+      toast({
+        title: "WebSockets Enabled",
+        description: "Connecting to exchange WebSockets for real data...",
+      });
     }
   };
   
@@ -342,7 +352,6 @@ const PriceTracker = () => {
                 value="simulated" 
                 aria-label="Simulated Data"
                 onClick={() => handleSimulatedDataToggle(true)}
-                disabled={websocketsEnabled} // Disable when websockets are enabled
                 className="flex items-center gap-1"
               >
                 <ActivitySquare className="h-3 w-3" />
@@ -360,21 +369,22 @@ const PriceTracker = () => {
             </ToggleGroup>
           </div>
           
-          {/* WebSocket Toggle */}
-          <div className="flex items-center space-x-2">
-            <Switch
-              checked={websocketsEnabled}
-              onCheckedChange={handleWebSocketToggle}
-              id="websocket-mode"
-              disabled={simulatedDataMode} // Only enabled when not in simulated mode
-            />
-            <label
-              htmlFor="websocket-mode"
-              className={`text-sm font-medium leading-none ${simulatedDataMode ? 'opacity-50' : ''}`}
-            >
-              {websocketsEnabled ? 'WebSockets Enabled' : 'WebSockets Disabled'}
-            </label>
-          </div>
+          {/* WebSocket Toggle - Only show when real data is selected */}
+          {!simulatedDataMode && (
+            <div className="flex items-center space-x-2">
+              <Switch
+                checked={websocketsEnabled}
+                onCheckedChange={handleWebSocketToggle}
+                id="websocket-mode"
+              />
+              <label
+                htmlFor="websocket-mode"
+                className="text-sm font-medium leading-none"
+              >
+                {websocketsEnabled ? 'WebSockets Enabled' : 'WebSockets Disabled'}
+              </label>
+            </div>
+          )}
           
           {/* Connection status and controls */}
           {!simulatedDataMode && (
@@ -384,7 +394,7 @@ const PriceTracker = () => {
                 variant="outline" 
                 size="sm" 
                 onClick={handleResetConnections}
-                disabled={isResetting || simulatedDataMode}
+                disabled={isResetting}
                 className="flex items-center gap-1"
               >
                 {isResetting ? (

@@ -1,4 +1,3 @@
-
 import { PriceData } from '@/types';
 import { toast } from '@/hooks/use-toast';
 
@@ -110,7 +109,7 @@ const initBinanceWebSocket = (): void => {
       connectionStatus.binance = false;
       
       // Attempt to reconnect with exponential backoff
-      if (binanceReconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+      if (binanceReconnectAttempts < MAX_RECONNECT_ATTEMPTS && !forceSimulatedData) {
         const delay = getReconnectDelay(binanceReconnectAttempts);
         binanceReconnectAttempts++;
         
@@ -118,7 +117,7 @@ const initBinanceWebSocket = (): void => {
         console.log(`Attempting to reconnect to Binance in ${delay/1000} seconds... (Attempt ${binanceReconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`);
         
         setTimeout(() => {
-          if (!connectionStatus.binance) {
+          if (!connectionStatus.binance && !forceSimulatedData) {
             initBinanceWebSocket();
           }
         }, delay);
@@ -221,7 +220,7 @@ const initCoinbaseWebSocket = (): void => {
       connectionStatus.coinbase = false;
       
       // Attempt to reconnect with exponential backoff
-      if (coinbaseReconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+      if (coinbaseReconnectAttempts < MAX_RECONNECT_ATTEMPTS && !forceSimulatedData) {
         const delay = getReconnectDelay(coinbaseReconnectAttempts);
         coinbaseReconnectAttempts++;
         
@@ -229,7 +228,7 @@ const initCoinbaseWebSocket = (): void => {
         console.log(`Attempting to reconnect to Coinbase in ${delay/1000} seconds... (Attempt ${coinbaseReconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`);
         
         setTimeout(() => {
-          if (!connectionStatus.coinbase) {
+          if (!connectionStatus.coinbase && !forceSimulatedData) {
             initCoinbaseWebSocket();
           }
         }, delay);
@@ -390,7 +389,9 @@ export const toggleSimulatedData = (useSimulated: boolean): void => {
       });
     } else {
       simulatedDataReason = "Attempting to connect to exchanges...";
-      // Try to reconnect
+      // Reset connection status
+      latestBinancePrice = null;
+      latestCoinbasePrice = null;
       toast({
         title: "Real Data Mode",
         description: "Attempting to connect to exchange WebSockets for real-time data.",
