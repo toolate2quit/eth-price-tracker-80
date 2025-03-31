@@ -1,5 +1,5 @@
 
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Legend } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 
 interface SpreadBarChartProps {
   chartData: { time: string; maxBinanceSpread: number; maxCoinbaseSpread: number }[];
@@ -12,8 +12,8 @@ const SpreadBarChart: React.FC<SpreadBarChartProps> = ({
   getMaxSpread, 
   formatYAxisTick 
 }) => {
-  console.log('SpreadBarChart data:', chartData);
-  console.log('Sample data point:', chartData?.[0]);
+  //console.log('SpreadBarChart data:', chartData);
+  //console.log('Sample data point:', chartData?.[0]);
 
   if (!chartData || chartData.length === 0) {
     return <div>No data available for the chart</div>;
@@ -24,7 +24,7 @@ const SpreadBarChart: React.FC<SpreadBarChartProps> = ({
   const maxCoinbaseValue = Math.max(...chartData.map(d => d.maxCoinbaseSpread || 0), 0);
   const maxSpread = Math.max(maxBinanceValue, maxCoinbaseValue, getMaxSpread() || 5);
   
-  console.log('Max values calculated - Binance:', maxBinanceValue, 'Coinbase:', maxCoinbaseValue);
+  //console.log('Max values calculated - Binance:', maxBinanceValue, 'Coinbase:', maxCoinbaseValue);
 
   // Count non-zero instances for display
   const binanceHigherCount = chartData.filter(item => (item.maxBinanceSpread || 0) > 0).length;
@@ -46,6 +46,10 @@ const SpreadBarChart: React.FC<SpreadBarChartProps> = ({
             domain={[0, maxSpread]} 
             tickFormatter={formatYAxisTick}
             label={{ value: 'Max Spread (USD)', angle: -90, position: 'insideLeft', offset: 0, style: { textAnchor: 'middle' } }}
+          />
+          <Tooltip 
+            formatter={(value) => [`$${Number(value).toFixed(2)}`, null]} 
+            labelFormatter={(label) => `Time: ${label}`}
           />
           <Legend wrapperStyle={{ paddingTop: '10px' }} />
           <Bar 

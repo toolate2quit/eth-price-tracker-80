@@ -36,10 +36,10 @@ import {
   AlertCircle
 } from 'lucide-react';
 
-// Constants
-const DATA_COLLECTION_INTERVAL = 5 * 60 * 1000; // 5 minutes in milliseconds
+// Constants - optimized for arbitrage tracking
+const DATA_COLLECTION_INTERVAL = 1 * 60 * 1000; // 1 minute in milliseconds (was 5 minutes)
 const DATA_RETENTION_PERIOD = 30 * 24 * 60 * 60 * 1000; // 30 days in milliseconds
-const PRICE_REFRESH_INTERVAL = 2000; // 2 seconds
+const PRICE_REFRESH_INTERVAL = 500; // 500 milliseconds (was 2000ms)
 
 const PriceTracker = () => {
   const { toast } = useToast();

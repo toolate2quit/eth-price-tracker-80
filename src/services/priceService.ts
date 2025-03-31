@@ -1,3 +1,4 @@
+
 import { PriceData } from '@/types';
 import { toast } from '@/hooks/use-toast';
 
@@ -19,14 +20,25 @@ const connectionStatus = {
 let binanceReconnectAttempts = 0;
 let coinbaseReconnectAttempts = 0;
 const MAX_RECONNECT_ATTEMPTS = 5;
-const RECONNECT_DELAY_MS = 3000; // 3 seconds initial delay
-const MAX_RECONNECT_DELAY_MS = 30000; // 30 seconds max delay
+const RECONNECT_DELAY_MS = 1000; // 1 second initial delay (was 3 seconds)
+const MAX_RECONNECT_DELAY_MS = 10000; // 10 seconds max delay (was 30 seconds)
 
 // Start with simulated data by default
 let forceSimulatedData = true;
 
 // Record why we're using simulated data for user feedback
 let simulatedDataReason = "WebSockets are disabled";
+
+// Optimization flags
+const USE_BATCHED_UPDATES = true;
+const BATCH_INTERVAL = 100; // Process batched updates every 100ms
+
+// Batch update timer
+let batchUpdateTimer: NodeJS.Timeout | null = null;
+let pendingPriceUpdates: {
+  binance?: number;
+  coinbase?: number;
+} = {};
 
 // Helper for exponential backoff
 const getReconnectDelay = (attempts: number): number => {
@@ -35,6 +47,35 @@ const getReconnectDelay = (attempts: number): number => {
     MAX_RECONNECT_DELAY_MS
   );
   return delay;
+};
+
+// Process batched price updates
+const processBatchedUpdates = () => {
+  if (pendingPriceUpdates.binance !== undefined) {
+    latestBinancePrice = pendingPriceUpdates.binance;
+  }
+  
+  if (pendingPriceUpdates.coinbase !== undefined) {
+    latestCoinbasePrice = pendingPriceUpdates.coinbase;
+  }
+  
+  // Reset pending updates
+  pendingPriceUpdates = {};
+};
+
+// Initialize batch processing
+const initBatchProcessing = () => {
+  if (USE_BATCHED_UPDATES && !batchUpdateTimer) {
+    batchUpdateTimer = setInterval(processBatchedUpdates, BATCH_INTERVAL);
+  }
+};
+
+// Cleanup batch processing
+const cleanupBatchProcessing = () => {
+  if (batchUpdateTimer) {
+    clearInterval(batchUpdateTimer);
+    batchUpdateTimer = null;
+  }
 };
 
 // Initialize Binance WebSocket with improved error handling
@@ -83,8 +124,15 @@ const initBinanceWebSocket = (): void => {
         
         // Handle pong response or ticker data
         if (data.c) { // If it contains the 'c' field, it's ticker data
-          latestBinancePrice = parseFloat(data.c); // Current price is in the 'c' field
-          console.log('Received real price from Binance:', latestBinancePrice);
+          const price = parseFloat(data.c); // Current price is in the 'c' field
+          
+          if (USE_BATCHED_UPDATES) {
+            pendingPriceUpdates.binance = price;
+          } else {
+            latestBinancePrice = price;
+          }
+          
+          //console.log('Received real price from Binance:', price);
         }
       } catch (error) {
         console.error('Error parsing Binance data:', error);
@@ -191,11 +239,18 @@ const initCoinbaseWebSocket = (): void => {
         
         // Handle different message types
         if (data.type === 'ticker' && data.product_id === 'ETH-USD') {
-          latestCoinbasePrice = parseFloat(data.price);
-          console.log('Received real price from Coinbase:', latestCoinbasePrice);
+          const price = parseFloat(data.price);
+          
+          if (USE_BATCHED_UPDATES) {
+            pendingPriceUpdates.coinbase = price;
+          } else {
+            latestCoinbasePrice = price;
+          }
+          
+          //console.log('Received real price from Coinbase:', price);
         } else if (data.type === 'pong') {
           // Heartbeat response, connection is still alive
-          console.log('Received heartbeat from Coinbase');
+          //console.log('Received heartbeat from Coinbase');
         }
       } catch (error) {
         console.error('Error parsing Coinbase data:', error);
@@ -252,6 +307,9 @@ const initCoinbaseWebSocket = (): void => {
 // Initialize WebSocket connections
 export const initializeWebSockets = (): { binance: boolean; coinbase: boolean } => {
   try {
+    // Initialize batch processing if enabled
+    initBatchProcessing();
+    
     // Don't try to initialize if simulated data is forced
     if (forceSimulatedData) {
       console.log('Simulated data mode is enabled. Not initializing WebSockets.');
@@ -277,6 +335,9 @@ export const initializeWebSockets = (): { binance: boolean; coinbase: boolean } 
 
 // Close WebSocket connections
 export const closeWebSockets = (): void => {
+  // Cleanup batch processing
+  cleanupBatchProcessing();
+  
   if (binanceSocket) {
     binanceSocket.close();
     binanceSocket = null;
@@ -301,7 +362,7 @@ export const fetchPrice = async (exchange: string): Promise<PriceData> => {
     return fallbackFetchPrice(exchange);
   }
   
-  console.log(`Using real data for ${exchange}`);
+  //console.log(`Using real data for ${exchange}`);
   return {
     exchange,
     price: exchange === 'binance' ? latestBinancePrice! : latestCoinbasePrice!,
@@ -311,10 +372,10 @@ export const fetchPrice = async (exchange: string): Promise<PriceData> => {
 
 // Fallback to simulated data when WebSockets are not available
 const fallbackFetchPrice = async (exchange: string): Promise<PriceData> => {
-  console.log(`Using fallback data for ${exchange}`);
+  //console.log(`Using fallback data for ${exchange}`);
   
-  // Simulate API call latency (100-300ms)
-  const latency = Math.random() * 200 + 100;
+  // Reduced simulated API call latency (20-50ms)
+  const latency = Math.random() * 30 + 20;
   await new Promise(resolve => setTimeout(resolve, latency));
   
   // Base price centered around $2000 (current ETH price)
