@@ -59,7 +59,11 @@ const filterRecordsByTimeRange = (records: PriceDifferenceRecord[], timeRange: s
 
 const formatSpreadData = (records: PriceDifferenceRecord[]) => {
   return records.map(record => {
-    // We need to ensure both values exist for each record to guarantee paired bars
+    // Debug output
+    if (records.length > 0 && record === records[0]) {
+      console.log('First spread record:', record);
+    }
+    
     return {
       time: formatTime(record.timestamp),
       maxBinanceSpread: record.difference > 0 ? Math.abs(record.difference) : 0,
@@ -69,11 +73,18 @@ const formatSpreadData = (records: PriceDifferenceRecord[]) => {
 };
 
 const formatExchangeSpreadData = (records: PriceDifferenceRecord[]) => {
-  return records.map(record => ({
-    time: formatTime(record.timestamp),
-    binanceHigher: record.difference > 0 ? record.difference : 0,
-    coinbaseHigher: record.difference < 0 ? Math.abs(record.difference) : 0
-  }));
+  return records.map(record => {
+    // Debug output
+    if (records.length > 0 && record === records[0]) {
+      console.log('First exchange spread record:', record);
+    }
+    
+    return {
+      time: formatTime(record.timestamp),
+      binanceHigher: record.difference > 0 ? record.difference : 0,
+      coinbaseHigher: record.difference < 0 ? Math.abs(record.difference) : 0
+    };
+  });
 };
 
 const formatPriceData = (records: PriceDifferenceRecord[]) => {
@@ -85,16 +96,26 @@ const formatPriceData = (records: PriceDifferenceRecord[]) => {
 };
 
 export const getMaxSpread = (chartData: any[]) => {
-  if (!chartData.length) return 100;
-  const maxBinance = Math.max(...chartData.map(d => d.maxBinanceSpread || d.binanceHigher || 0));
-  const maxCoinbase = Math.max(...chartData.map(d => d.maxCoinbaseSpread || d.coinbaseHigher || 0));
+  if (!chartData || !chartData.length) return 100;
+  
+  const maxBinance = Math.max(
+    ...chartData.map(d => d.maxBinanceSpread || d.binanceHigher || 0), 
+    0
+  );
+  
+  const maxCoinbase = Math.max(
+    ...chartData.map(d => d.maxCoinbaseSpread || d.coinbaseHigher || 0), 
+    0
+  );
+  
+  console.log('Max values calculated - Binance:', maxBinance, 'Coinbase:', maxCoinbase);
+  
   return Math.max(maxBinance, maxCoinbase, 5) * 1.2; // Add 20% margin for better visualization
 };
 
 export const formatYAxisTick = (value: number) => `$${value.toFixed(0)}`;
 
-// These functions are not used with our static data but need to be kept for reference 
-// or in case we switch back to dynamic data later
+// These functions are for price charts
 export const getMaxPrice = (chartData: any[]) => {
   if (!chartData.length) return 2100;
   

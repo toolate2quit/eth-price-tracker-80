@@ -13,16 +13,21 @@ const SpreadBarChart: React.FC<SpreadBarChartProps> = ({
   formatYAxisTick 
 }) => {
   console.log('SpreadBarChart data:', chartData);
+  console.log('Sample data point:', chartData?.[0]);
 
   const maxSpread = getMaxSpread();
+
+  if (!chartData || chartData.length === 0) {
+    return <div>No data available for the chart</div>;
+  }
 
   return (
     <ResponsiveContainer width="100%" height="100%">
       <BarChart 
         data={chartData} 
         margin={{ top: 10, right: 30, left: 20, bottom: 20 }}
-        barCategoryGap={8}
-        barGap={2}
+        barGap={2} // Space between bars in the same category
+        barCategoryGap={8} // Space between categories (time intervals)
       >
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="time" />
@@ -31,17 +36,17 @@ const SpreadBarChart: React.FC<SpreadBarChartProps> = ({
           tickFormatter={formatYAxisTick}
           label={{ value: 'Max Spread (USD)', angle: -90, position: 'insideLeft' }}
         />
-        <Legend />
+        <Legend wrapperStyle={{ paddingTop: '10px' }} />
         <Bar 
           dataKey="maxBinanceSpread" 
           name="Binance Higher" 
-          fill="rgba(34, 197, 94, 0.6)" // Green
+          fill="#F0B90B" // Binance yellow
           isAnimationActive={false}
         />
         <Bar 
           dataKey="maxCoinbaseSpread" 
           name="Coinbase Higher" 
-          fill="rgba(239, 68, 68, 0.6)" // Red
+          fill="#0052FF" // Coinbase blue
           isAnimationActive={false}
         />
       </BarChart>
