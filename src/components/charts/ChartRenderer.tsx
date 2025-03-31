@@ -42,7 +42,7 @@ const ChartRenderer: React.FC<ChartRendererProps> = ({ chartData, chartType }) =
         return (
           <ExchangeSpreadChart 
             chartData={chartData} 
-            getMaxSpread={() => getMaxSpread(chartData)} 
+            getMaxSpread={getMaxSpreadValue} 
             formatYAxisTick={formatYAxisTick}
           />
         );
@@ -50,7 +50,7 @@ const ChartRenderer: React.FC<ChartRendererProps> = ({ chartData, chartType }) =
         return (
           <SpreadBarChart 
             chartData={chartData} 
-            getMaxSpread={() => getMaxSpread(chartData)} 
+            getMaxSpread={getMaxSpreadValue} 
             formatYAxisTick={formatYAxisTick}
           />
         );
@@ -76,7 +76,7 @@ const ChartRenderer: React.FC<ChartRendererProps> = ({ chartData, chartType }) =
         return (
           <SpreadBarChart 
             chartData={chartData} 
-            getMaxSpread={() => getMaxSpread(chartData)} 
+            getMaxSpread={getMaxSpreadValue} 
             formatYAxisTick={formatYAxisTick}
           />
         );
