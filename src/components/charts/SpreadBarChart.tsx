@@ -1,10 +1,5 @@
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Legend } from 'recharts';
-import { 
-  ChartContainer, 
-  ChartTooltip, 
-  ChartTooltipContent 
-} from '@/components/ui/chart';
 
 interface SpreadBarChartProps {
   chartData: { time: string; maxBinanceSpread: number; maxCoinbaseSpread: number }[];
@@ -22,18 +17,12 @@ const SpreadBarChart: React.FC<SpreadBarChartProps> = ({
   const maxSpread = getMaxSpread();
 
   return (
-    <ChartContainer 
-      config={{
-        binance: { color: "rgba(34, 197, 94, 0.6)" },
-        coinbase: { color: "rgba(239, 68, 68, 0.6)" }
-      }}
-      className="h-full"
-    >
+    <ResponsiveContainer width="100%" height="100%">
       <BarChart 
         data={chartData} 
         margin={{ top: 10, right: 30, left: 20, bottom: 20 }}
-        barCategoryGap={10}
-        barGap={0}
+        barCategoryGap={8}
+        barGap={2}
       >
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="time" />
@@ -41,10 +30,6 @@ const SpreadBarChart: React.FC<SpreadBarChartProps> = ({
           domain={[0, maxSpread]} 
           tickFormatter={formatYAxisTick}
           label={{ value: 'Max Spread (USD)', angle: -90, position: 'insideLeft' }}
-        />
-        <ChartTooltip 
-          content={<ChartTooltipContent />}
-          cursor={{ fill: 'rgba(0, 0, 0, 0.05)' }} 
         />
         <Legend />
         <Bar 
@@ -60,7 +45,7 @@ const SpreadBarChart: React.FC<SpreadBarChartProps> = ({
           isAnimationActive={false}
         />
       </BarChart>
-    </ChartContainer>
+    </ResponsiveContainer>
   );
 };
 

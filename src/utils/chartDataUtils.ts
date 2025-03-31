@@ -1,3 +1,4 @@
+
 import { PriceDifferenceRecord } from '@/types';
 
 export const formatTime = (date: Date) => {
@@ -58,7 +59,7 @@ const filterRecordsByTimeRange = (records: PriceDifferenceRecord[], timeRange: s
 
 const formatSpreadData = (records: PriceDifferenceRecord[]) => {
   return records.map(record => {
-    // Ensure each record always has both values set, even if they're zero
+    // We need to ensure both values exist for each record to guarantee paired bars
     return {
       time: formatTime(record.timestamp),
       maxBinanceSpread: record.difference > 0 ? Math.abs(record.difference) : 0,
